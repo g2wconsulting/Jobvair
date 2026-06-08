@@ -63,8 +63,7 @@ export const DEFAULT_SECTIONS = [
 export const FONT_PRESETS = [
   { label:"DM Sans",      value:"DM Sans, sans-serif",        category:"Modern" },
   { label:"Georgia",      value:"Georgia, serif",              category:"Classic" },
-  { label:"Garamond",     value:"Garamond, serif",             category:"Classic" },
-  { label:"Helvetica",    value:"Helvetica, Arial, sans-serif",category:"Clean" },
+  { label:"EB Garamond",  value:"EB Garamond, serif",          category:"Classic" },
   { label:"Lato",         value:"Lato, sans-serif",            category:"Modern" },
   { label:"Merriweather", value:"Merriweather, serif",         category:"Classic" },
   { label:"Montserrat",   value:"Montserrat, sans-serif",      category:"Bold" },

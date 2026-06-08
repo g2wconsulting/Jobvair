@@ -113,6 +113,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [dropActive,     setDropActive]      = useState(false);
   const [dragId,         setDragId]          = useState(null);
   const [dragJobId,      setDragJobId]       = useState(null);
+  const [sectionDropTargetId, setSectionDropTargetId] = useState(null);
+  const [jobDropTargetId, setJobDropTargetId] = useState(null);
   const [previewMode,    setPreviewMode]     = useState(false);
   const [panelOpen,      setPanelOpen]       = useState(true);
   const fileRef    = useRef(null);
@@ -123,6 +125,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const accent     = tmpl.accent_color || C.teal;
   const fontFamily = customFont || tmpl.font_family || "DM Sans, sans-serif";
   const hdrLayout  = headerLayout || tmpl.header_style || "left";
+  const effectiveHdrLayout = hdrLayout === "sidebar" ? "left" : hdrLayout;
+  const isHeaderLayoutImplemented = id => id !== "sidebar";
   const fontSize   = tmpl.base_font_size || 13;
   const sGap       = { compact:10, normal:18, spacious:28 }[tmpl.section_spacing] || 18;
   const margins    = tmpl.page_margin === "tight" ? "32px 40px" : tmpl.page_margin === "wide" ? "52px 72px" : "44px 56px";
@@ -254,35 +258,46 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   }, [user?.id]); // eslint-disable-line
 
   // ── Section drag-and-drop ─────────────────────────────────────────────
-  const onDragStart = (e, id) => { setDragId(id); e.dataTransfer.effectAllowed = "move"; };
-  const onDragOver  = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
+  const onDragStart = (e, id) => { setDragId(id); setSectionDropTargetId(null); e.dataTransfer.effectAllowed = "move"; };
+  const onDragOver  = (e, targetId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (targetId && targetId !== dragId) setSectionDropTargetId(targetId);
+  };
   const onDrop      = (e, targetId) => {
     e.preventDefault();
-    if (!dragId || dragId === targetId) { setDragId(null); return; }
+    if (!dragId || dragId === targetId) { setDragId(null); setSectionDropTargetId(null); return; }
     setSections(ss => {
       const arr = [...ss].sort((a, b) => a.display_order - b.display_order);
       const fi = arr.findIndex(s => (s.id || s.section_type) === dragId);
       const ti = arr.findIndex(s => (s.id || s.section_type) === targetId);
+      if (fi < 0 || ti < 0) return arr;
       const r  = [...arr]; const [m] = r.splice(fi, 1); r.splice(ti, 0, m);
       return r.map((s, i) => ({ ...s, display_order: i }));
     });
     setDragId(null);
+    setSectionDropTargetId(null);
   };
 
   // ── Job drag-and-drop (item level) ────────────────────────────────────
-  const onJobDragStart = (e, id) => { setDragJobId(id); e.dataTransfer.effectAllowed = "move"; };
-  const onJobDragOver  = (e) => { e.preventDefault(); };
+  const onJobDragStart = (e, id) => { setDragJobId(id); setJobDropTargetId(null); e.dataTransfer.effectAllowed = "move"; };
+  const onJobDragOver  = (e, targetId) => {
+    e.preventDefault();
+    if (targetId && targetId !== dragJobId) setJobDropTargetId(targetId);
+  };
   const onJobDrop      = (e, targetId) => {
     e.preventDefault();
-    if (!dragJobId || dragJobId === targetId) { setDragJobId(null); return; }
+    if (!dragJobId || dragJobId === targetId) { setDragJobId(null); setJobDropTargetId(null); return; }
     setJobEntries(jobs => {
       const arr = [...jobs].sort((a, b) => a.display_order - b.display_order);
       const fi  = arr.findIndex(j => j.id === dragJobId);
       const ti  = arr.findIndex(j => j.id === targetId);
+      if (fi < 0 || ti < 0) return arr;
       const r   = [...arr]; const [m] = r.splice(fi, 1); r.splice(ti, 0, m);
       return r.map((j, i) => ({ ...j, display_order: i }));
     });
     setDragJobId(null);
+    setJobDropTargetId(null);
   };
 
   const toggleVisible = (id) => setSections(ss => ss.map(s => (s.id || s.section_type) === id ? { ...s, is_visible: !s.is_visible } : s));
@@ -463,14 +478,14 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   // ── Resume header renderer ─────────────────────────────────────────────
   // Reads headerConfig visibility flags; editing=true shows inline inputs
   const setHC = (field, val) => setHeaderConfig(h => ({ ...normalizeHeaderConfig(h), [field]: val }));
-  const isBanner = hdrLayout === "bold_banner";
+  const isBanner = effectiveHdrLayout === "bold_banner";
   const textColor = isBanner ? "#fff" : "#0F172A";
   const subColor  = isBanner ? "rgba(255,255,255,0.85)" : accent;
   const contactColor = isBanner ? "rgba(255,255,255,0.75)" : "#64748B";
   const linkColor    = isBanner ? "rgba(255,255,255,0.6)"  : "#94A3B8";
   const inputStyle = (extra={}) => ({ background:"transparent", border:"none", outline:"none", fontFamily, ...extra });
 
-  const ResumeHeader = ({ editing }) => {
+  const renderResumeHeader = (editing) => {
     const nameEl = editing
       ? <input value={hc.name||""} onChange={e=>setHC("name",e.target.value)} placeholder="Your Name" style={inputStyle({ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor, width:"100%", display:"block" })} />
       : <div style={{ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor }}>{hc.name||"Your Name"}</div>;
@@ -511,12 +526,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       </>
     );
 
-    const align = hdrLayout === "centered" ? "center" : "left";
+    const align = effectiveHdrLayout === "centered" ? "center" : "left";
     const inner = <>{nameEl}{headlineEl}{contactLineEl}</>;
     const [mTop, mSide] = margins.split(" ");
     const bannerMargin = `-${mTop} -${mSide} 20px`;
 
-    if (hdrLayout === "bold_banner") return (
+    if (effectiveHdrLayout === "bold_banner") return (
       <div style={{ background:accent, padding:"20px 24px", margin:bannerMargin, borderRadius:"4px 4px 0 0", cursor:editing?"default":"pointer" }}
         onClick={!editing ? ()=>openToolbarPanel("header") : undefined}>
         {inner}
@@ -535,7 +550,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const JobBlock = ({ job, editing }) => {
     const isActiveJob = activeJobId === job.id && activeSection === "experience";
     const isDraggingJob = dragJobId === job.id;
-    const isDropTarget = dragJobId && dragJobId !== job.id;
+    const isDropTarget = dragJobId && dragJobId !== job.id && jobDropTargetId === job.id;
     const dateStr = job.start_date ? `${job.start_date} – ${job.is_current ? "Present" : (job.end_date||"")}` : "";
     if (!editing) return (
       <div style={{ marginBottom:12 }}>
@@ -551,14 +566,14 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       <div
         draggable
         onDragStart={e => onJobDragStart(e, job.id)}
-        onDragOver={onJobDragOver}
+        onDragOver={e => onJobDragOver(e, job.id)}
         onDrop={e => onJobDrop(e, job.id)}
-        onDragEnd={() => setDragJobId(null)}
+        onDragEnd={() => { setDragJobId(null); setJobDropTargetId(null); }}
         style={{
           marginBottom:10, padding:"10px 10px 10px 32px", borderRadius:8, position:"relative",
-          border:`1px solid ${isActiveJob ? accent : isDraggingJob ? accent+"88" : C.border}`,
-          background: isActiveJob ? `${accent}06` : isDraggingJob ? `${accent}11` : "#FAFAFA",
-          opacity: isDraggingJob ? 0.4 : 1, cursor:"text", transition:"border-color 0.15s",
+          border:`1px solid ${isActiveJob ? accent : isDropTarget ? accent : isDraggingJob ? accent+"88" : C.border}`,
+          background: isActiveJob ? `${accent}06` : isDropTarget ? `${accent}08` : isDraggingJob ? `${accent}11` : "#FAFAFA",
+          opacity: isDraggingJob ? 0.4 : 1, cursor:"text", transition:"border-color 0.15s, background 0.15s",
         }}
         onMouseEnter={e => { if(!isActiveJob) e.currentTarget.style.borderColor = accent+"66"; }}
         onMouseLeave={e => { if(!isActiveJob) e.currentTarget.style.borderColor = C.border; }}
@@ -629,8 +644,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
       </div>
       <div style={{ display:"flex", justifyContent:"center", background:"#E2E8F0", padding:"32px 24px", borderRadius:12, minHeight:800 }}>
-        <div ref={previewRef} style={{ width:816, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.18)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6 }}>
-          <ResumeHeader editing={false} />
+        <div ref={previewRef} style={{ width:900, maxWidth:"calc(100vw - 80px)", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.18)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6 }}>
+          {renderResumeHeader(false)}
           {sorted.filter(s => s.is_visible && s.section_type !== "name").map(s => (
             <div key={s.section_type||s.id} style={{ marginBottom:sGap }}>
               <SectionHeading label={s.label} />
@@ -649,7 +664,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const activeSec = sorted.find(s => (s.id||s.section_type) === activeSection);
 
   // Right panel — context-aware
-  const RightPanel = () => {
+  const renderRightPanel = () => {
     if (showHeaderPanel) return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
         <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
@@ -688,12 +703,15 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:8 }}>Header Layout</div>
             {HEADER_LAYOUTS.map(h => {
               const locked = h.tier==="premium" && !isPaid;
+              const implemented = isHeaderLayoutImplemented(h.id);
+              const disabled = locked || !implemented;
               const isActive = hdrLayout===h.id;
               return (
-                <div key={h.id} onClick={()=>{ if(!locked) setHeaderLayout(h.id); }}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", borderRadius:7, marginBottom:4, cursor:locked?"not-allowed":"pointer", border:`1px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:"transparent", opacity:locked?0.55:1 }}>
+                <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }}
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", borderRadius:7, marginBottom:4, cursor:disabled?"not-allowed":"pointer", border:`1px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:"transparent", opacity:disabled?0.55:1 }}>
                   <span style={{ fontSize:16 }}>{h.icon}</span>
                   <span style={{ fontSize:12, flex:1, color:C.navy }}>{h.label}</span>
+                  {!implemented && <span style={{ fontSize:10, color:C.textMuted }}>Coming soon</span>}
                   {locked && <span style={{ fontSize:10, color:C.gold }}>Pro</span>}
                   {isActive && <span style={{ fontSize:11, color:C.teal, fontWeight:700 }}>check</span>}
                 </div>
@@ -762,7 +780,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   };
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 80px)", overflow:"hidden", margin:"-20px -32px", fontFamily:"inherit" }}>
+    <div className="jobvair-builder-shell" style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 60px)", overflow:"hidden", margin:"-28px -32px", fontFamily:"inherit", width:"calc(100% + 64px)", maxWidth:"none", textAlign:"left" }}>
 
       {/* Top bar */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 20px", background:"#fff", borderBottom:`1px solid ${C.border}`, flexShrink:0, gap:8, flexWrap:"wrap" }}>
@@ -834,11 +852,14 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {HEADER_LAYOUTS.map(h => {
                   const locked = h.tier==="premium" && !isPaid;
+                  const implemented = isHeaderLayoutImplemented(h.id);
+                  const disabled = locked || !implemented;
                   const isActive = hdrLayout===h.id;
                   return (
-                    <div key={h.id} onClick={()=>{ if(!locked) setHeaderLayout(h.id); }} style={{ padding:"8px 14px", borderRadius:8, cursor:locked?"not-allowed":"pointer", transition:"all 0.15s", border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:locked?"#F8FAFC":C.bg, opacity:locked?0.6:1 }}>
+                    <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }} style={{ padding:"8px 14px", borderRadius:8, cursor:disabled?"not-allowed":"pointer", transition:"all 0.15s", border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:disabled?"#F8FAFC":C.bg, opacity:disabled?0.6:1 }}>
                       <div style={{ fontSize:18, marginBottom:3 }}>{h.icon}</div>
                       <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{h.label}</div>
+                      {!implemented && <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Coming soon</div>}
                       {locked && <div style={{ fontSize:10, color:C.gold, marginTop:2 }}>Pro</div>}
                       {isActive && <div style={{ fontSize:10, color:C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
                     </div>
@@ -857,7 +878,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         <div style={{ width:220, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.border}`, overflowY:"auto", display:"flex", flexDirection:"column" }}>
           <div style={{ padding:"14px 14px 10px", borderBottom:`1px solid ${C.border}` }}>
             <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Sections</div>
-            <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Drag on canvas to reorder</div>
+            <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Drag sections to reorder</div>
           </div>
           <div style={{ flex:1, padding:10, overflowY:"auto" }}>
             <div onClick={()=>{ setActiveSection("name"); openToolbarPanel("header"); }}
@@ -867,9 +888,13 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             </div>
             {sorted.filter(s=>s.section_type!=="name").map(s => {
               const sid = s.id||s.section_type;
+              const isActiveSideSection = activeSection===sid && !showHeaderPanel;
+              const isDraggingSideSection = dragId===sid;
+              const isSidebarDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
               return (
-                <div key={sid} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${activeSection===sid&&!showHeaderPanel?C.teal:"transparent"}`, background:activeSection===sid&&!showHeaderPanel?C.tealLight:"transparent", opacity:s.is_visible?1:0.45 }}>
+                <div key={sid} draggable onDragStart={e=>onDragStart(e,sid)} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"grab", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
+                  <span title="Drag to reorder section" style={{ fontSize:13, color:isSidebarDropTarget?C.teal:C.textLight, lineHeight:1, width:10, textAlign:"center" }}>⋮</span>
                   <span style={{ fontSize:12 }}>{s.icon||"📄"}</span>
                   <span style={{ flex:1, fontSize:12, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
                   {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"👁":"+"}</button>}
@@ -894,15 +919,15 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
 
         {/* Canvas */}
-        <div style={{ flex:1, overflowY:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"32px 24px" }}>
+        <div style={{ flex:1, minWidth:0, overflow:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"32px 32px" }}>
           <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, letterSpacing:"0.04em", textAlign:"center" }}>
             Drag sections to reorder - Click to edit
           </div>
-          <div style={{ width:"100%", maxWidth:794, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1024 }}>
+          <div style={{ width:900, maxWidth:"none", flexShrink:0, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1100 }}>
 
             {/* Header */}
             <div style={{ position:"relative", cursor:"pointer", marginBottom:sGap }} onClick={()=>{ openToolbarPanel("header"); setActiveSection("name"); }}>
-              <ResumeHeader editing={true} />
+              {renderResumeHeader(true)}
             </div>
 
             {/* Sections */}
@@ -911,20 +936,23 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const sid = s.id||s.section_type;
               const isActive = activeSection===sid && !showHeaderPanel;
               const isDragging = dragId===sid;
+              const isDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
               return (
                 <div key={sid}
                   draggable
                   onDragStart={e=>onDragStart(e,sid)}
-                  onDragOver={onDragOver}
+                  onDragOver={e=>onDragOver(e,sid)}
                   onDrop={e=>onDrop(e,sid)}
-                  onDragEnd={()=>setDragId(null)}
-                  style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:`2px solid transparent`, padding:"8px 10px 8px 28px", background:isActive?`${accent}06`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s" }}
-                  onMouseEnter={e=>{ if(!isActive&&!isDragging) e.currentTarget.style.borderColor=C.border; }}
-                  onMouseLeave={e=>{ if(!isActive&&!isDragging) e.currentTarget.style.borderColor="transparent"; }}
+                  onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }}
+                  style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:`2px solid ${C.border}`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
+                  onMouseEnter={e=>{ if(!isActive&&!isDragging&&!isDropTarget) e.currentTarget.style.borderColor=accent+"66"; }}
+                  onMouseLeave={e=>{ if(!isActive&&!isDragging&&!isDropTarget) e.currentTarget.style.borderColor=C.border; }}
                 >
-                  {dragId && dragId!==sid && <div style={{ position:"absolute", top:-2, left:0, right:0, height:3, background:accent, borderRadius:2, opacity:0.6 }} />}
-                  <div style={{ position:"absolute", left:6, top:"50%", transform:"translateY(-50%)", cursor:"grab", userSelect:"none" }}>
-                    {[0,1,2].map(r=>(<div key={r} style={{ display:"flex", gap:2, marginBottom:r<2?2:0 }}><div style={{ width:3,height:3,borderRadius:"50%",background:"#CBD5E1" }}/><div style={{ width:3,height:3,borderRadius:"50%",background:"#CBD5E1" }}/></div>))}
+                  {isDropTarget && <div style={{ position:"absolute", top:-3, left:8, right:8, height:3, background:accent, borderRadius:2 }} />}
+                  <div title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:26, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}08`:"#F8FAFC", cursor:"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <div>
+                      {[0,1,2].map(r=>(<div key={r} style={{ display:"flex", gap:3, marginBottom:r<2?3:0 }}><div style={{ width:4,height:4,borderRadius:"50%",background:isDragging||isDropTarget?accent:"#94A3B8" }}/><div style={{ width:4,height:4,borderRadius:"50%",background:isDragging||isDropTarget?accent:"#94A3B8" }}/></div>))}
+                    </div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }} style={{ cursor:"pointer", flex:1 }}>
@@ -959,7 +987,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
         {/* Right panel */}
         <div style={{ width:260, flexShrink:0, background:"#fff", borderLeft:`1px solid ${C.border}`, overflowY:"auto", display:"flex", flexDirection:"column" }}>
-          <RightPanel />
+          {renderRightPanel()}
           {!isPaid && (
             <div style={{ margin:12, padding:"10px 12px", background:"#FFFBEB", border:`1px solid #F6E05E`, borderRadius:8 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#92600A", marginBottom:4 }}>Pro Features</div>
