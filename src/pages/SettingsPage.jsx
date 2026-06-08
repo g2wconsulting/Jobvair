@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { C, STRIPE_PRICES } from "../constants/appConstants.js";
-import { Badge, Btn, Card, CheckGroup, Input, SectionTitle, Select, Toggle } from "../components/ui.jsx";
+import { Avatar, Badge, Btn, Card, CheckGroup, Input, SectionTitle, Select, Tabs, Toggle } from "../components/ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
 
 function SubscriptionTab({ user, plans }) {
@@ -151,7 +151,7 @@ function BillingTab({ user }) {
   );
 }
 
-function VerificationTab({ user, onUpdateUser }) {
+export function VerificationTab({ user, onUpdateUser }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
 

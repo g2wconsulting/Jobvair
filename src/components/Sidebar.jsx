@@ -1,5 +1,5 @@
 import { C, NAV } from "../constants/appConstants.js";
-import { Badge } from "./ui.jsx";
+import { Avatar } from "./ui.jsx";
 
 export default function Sidebar({ active, onNav, user, collapsed, onCollapse }) {
   return (

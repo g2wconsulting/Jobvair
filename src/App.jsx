@@ -11,6 +11,7 @@ import ResumesPage from "./pages/ResumesPage.jsx";
 import BuilderPage from "./pages/BuilderPage.jsx";
 import AIOptimizerPage from "./pages/AIOptimizerPage.jsx";
 import CoverLetterPage from "./pages/CoverLetterPage.jsx";
+import HistoryPage from "./pages/HistoryPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 export default function App() {
   const [authUser, setAuthUser]   = useState(undefined); // undefined = loading, null = logged out
@@ -73,8 +74,6 @@ export default function App() {
           setProfileSkills([]);
           setProfileWork([]);
           setProfileEdu([]);
-          setBuilderSections(null);
-          setBuilderContactFields(null);
           setPage("dashboard");
         }
       }
@@ -230,6 +229,7 @@ export default function App() {
               user={user}
             />
           )}
+          {page === "history"    && <HistoryPage onNav={setPage} />}
           {page === "settings"    && <SettingsPage user={user} onLogout={handleLogout} />}
         </div>
       </div>

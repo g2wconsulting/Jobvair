@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { C } from "../constants/appConstants.js";
 
 export function Badge({ color = "teal", children, small }) {

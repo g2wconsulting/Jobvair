@@ -1,4 +1,4 @@
-import { C } from "../constants/appConstants.js";
+import { C, SEED_ANALYSES } from "../constants/appConstants.js";
 import { Badge, Btn, Card, ProgressBar, SectionTitle } from "../components/ui.jsx";
 
 export default function DashboardPage({ user, onNav }) {

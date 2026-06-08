@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { C } from "../constants/appConstants.js";
+import { Btn } from "./ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
 
 export default function ResumeUploadZone({ user, onParsed }) {

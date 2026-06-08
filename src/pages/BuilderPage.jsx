@@ -129,6 +129,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const fontSize   = tmpl.base_font_size || 13;
   const sGap       = { compact:10, normal:18, spacious:28 }[tmpl.section_spacing] || 18;
   const margins    = tmpl.page_margin === "tight" ? "32px 40px" : tmpl.page_margin === "wide" ? "52px 72px" : "44px 56px";
+  const contactFields = headerConfig;
 
   // ── Init ───────────────────────────────────────────────────────────────
   const defaultHeaderConfig = useCallback(() => ({

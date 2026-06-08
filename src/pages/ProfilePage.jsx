@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { C, SALARY_MAP } from "../constants/appConstants.js";
-import { Badge, Btn, Card, CheckGroup, Input, SectionTitle, Select, Tabs, Toggle } from "../components/ui.jsx";
+import { C, EMPTY_USER, SALARY_MAP } from "../constants/appConstants.js";
+import { Badge, Btn, Card, CheckGroup, Input, ProgressBar, SectionTitle, Select, Tabs, Toggle } from "../components/ui.jsx";
 import ResumeUploadZone from "../components/ResumeUploadZone.jsx";
+import { VerificationTab } from "./SettingsPage.jsx";
 
 export default function ProfilePage({ user, onUpdateUser, profileForm, setProfileForm, profileSkills, setProfileSkills, profileWork, setProfileWork, profileEdu, setProfileEdu, profileCerts, setProfileCerts, onSave, onParsedResume }) {
   const [tab, setTab] = useState("basic");
