@@ -104,8 +104,9 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [selectedTmpl,   setSelectedTmpl]    = useState(null);
   const [customFont,     setCustomFont]      = useState(null); // overrides template font
   const [headerLayout,   setHeaderLayout]    = useState(null); // overrides template header_style
-  const [activeSection,  setActiveSection]   = useState("summary");
+  const [activeSection,  setActiveSection]   = useState(null);
   const [activeJobId,    setActiveJobId]     = useState(null);
+  const [hoveredBlockId, setHoveredBlockId]  = useState(null);
   const [saveState,      setSaveState]       = useState("idle");
   const [importing,      setImporting]       = useState(false);
   const [importedFile,   setImportedFile]    = useState(null);
@@ -665,7 +666,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
   // Right panel — context-aware
   const renderRightPanel = () => {
-    if (showHeaderPanel) return (
+    if (showHeaderPanel || activeSection === "name") return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
         <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
           <div>
@@ -741,39 +742,60 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       </div>
     );
 
-    // Default sections list
+    if (activeSec) return (
+      <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{activeSec.label}</div>
+          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit this resume block</div>
+        </div>
+        <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+          <div>
+            <div style={{ fontSize:11, color:C.textMuted, marginBottom:5, fontWeight:700 }}>Content</div>
+            <textarea
+              value={activeSec.content?.text || ""}
+              onChange={e=>setContent(activeSec.id || activeSec.section_type, e.target.value)}
+              rows={10}
+              placeholder={`Enter your ${activeSec.label.toLowerCase()}...`}
+              style={{ width:"100%", resize:"vertical", minHeight:160, padding:"9px 10px", border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, lineHeight:1.55, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
+            />
+          </div>
+          <label style={{ display:"flex", alignItems:"center", gap:8, cursor:activeSec.is_required?"not-allowed":"pointer", opacity:activeSec.is_required?0.5:1 }}>
+            <input type="checkbox" checked={activeSec.is_visible!==false} disabled={activeSec.is_required} onChange={()=>toggleVisible(activeSec.id || activeSec.section_type)} style={{ accentColor:C.teal, width:14, height:14 }} />
+            <span style={{ fontSize:12, color:C.slate }}>Show section on resume</span>
+          </label>
+          <div style={{ padding:"10px 11px", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, color:C.textMuted, lineHeight:1.5 }}>
+            Reorder this block from the canvas or the Layers panel on the left.
+          </div>
+        </div>
+      </div>
+    );
+
+    // Default document inspector
     return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
         <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Sections</div>
-          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Click to edit</div>
+          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Document Settings</div>
+          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Select a resume block to edit its properties.</div>
         </div>
-        <div style={{ overflowY:"auto", flex:1, padding:12 }}>
-          {sorted.map(s => {
-            const sid = s.id||s.section_type;
-            return (
-              <div key={sid} onClick={()=>{ setActiveSection(sid); if(s.section_type==="name") openToolbarPanel("header"); else closeToolbarPanel(); }}
-                style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${activeSection===sid?C.teal:"transparent"}`, background:activeSection===sid?C.tealLight:"transparent", opacity:s.is_visible?1:0.4 }}>
-                <span style={{ fontSize:12 }}>{s.icon||"doc"}</span>
-                <span style={{ flex:1, fontSize:12, fontWeight:activeSection===sid?700:400, color:activeSection===sid?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
-                {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"hide":"show"}</button>}
+        <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+          {[
+            ["Template", selectedTmpl?.name || tmpl.name || "Modern", () => openToolbarPanel("templates")],
+            ["Font", FONT_PRESETS.find(f => f.value === fontFamily)?.label || fontFamily.split(",")[0], () => openToolbarPanel("fonts")],
+            ["Header Layout", HEADER_LAYOUTS.find(h => h.id === hdrLayout)?.label || "Left Aligned", () => openToolbarPanel("design")],
+            ["Section Spacing", tmpl.section_spacing || "normal", null],
+            ["Page Margins", tmpl.page_margin || "normal", null],
+          ].map(([label, value, action]) => (
+            <div key={label} style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"10px 11px", background:C.bg }}>
+              <div style={{ fontSize:10, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>{label}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ flex:1, fontSize:12, color:C.navy, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value}</div>
+                {action && <button onClick={action} style={{ border:`1px solid ${C.border}`, background:"#fff", borderRadius:6, padding:"3px 7px", fontSize:11, color:C.slate, cursor:"pointer", fontFamily:"inherit" }}>Edit</button>}
               </div>
-            );
-          })}
-          <button onClick={addCustomSection} style={{ width:"100%", background:"none", border:`1.5px dashed ${C.border}`, borderRadius:7, padding:"7px", cursor:"pointer", fontSize:11, color:C.textMuted, fontFamily:"inherit", marginTop:6 }}>+ Add Section</button>
-        </div>
-        <div style={{ padding:"12px 14px", borderTop:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:6 }}>Import Resume</div>
-          <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display:"none" }} onChange={e=>processFile(e.target.files[0])} />
-          <div onClick={()=>fileRef.current?.click()}
-            onDragEnter={e=>{e.preventDefault();setDropActive(true);}}
-            onDragOver={e=>{e.preventDefault();setDropActive(true);}}
-            onDragLeave={()=>setDropActive(false)}
-            onDrop={e=>{e.preventDefault();setDropActive(false);processFile(e.dataTransfer.files[0]);}}
-            style={{ border:`2px dashed ${dropActive?C.teal:C.border}`, borderRadius:7, padding:"10px 8px", textAlign:"center", cursor:"pointer", background:dropActive?C.tealLight:C.bg, fontSize:11, color:C.textMuted }}>
-            {importing?"Parsing...":importedFile?"Done: "+importedFile.name:"Drop PDF/DOCX"}
+            </div>
+          ))}
+          <div style={{ padding:"10px 11px", background:C.tealLight, border:`1px solid ${C.teal}33`, borderRadius:8, fontSize:11, color:C.tealDark, lineHeight:1.5 }}>
+            Use the Layers panel on the left to add, hide, and reorder sections. Click a block on the resume to edit it here.
           </div>
-          {parseError && <div style={{ fontSize:11, color:C.danger, marginTop:4 }}>Error: {parseError}</div>}
         </div>
       </div>
     );
@@ -792,7 +814,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         <div style={{ display:"flex", gap:4, alignItems:"center" }}>
           {[
             ["Template", () => openToolbarPanel("templates"), showTemplates],
-            ["Header",   () => openToolbarPanel("header"), showHeaderPanel],
+            ["Header",   () => { setActiveSection("name"); openToolbarPanel("header"); }, showHeaderPanel],
             ["Font",     () => openToolbarPanel("fonts"), showFonts],
             ["Design",   () => openToolbarPanel("design"), showDesign],
           ].map(([label, handler, active]) => (
@@ -875,16 +897,16 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
 
         {/* Left sidebar */}
-        <div style={{ width:220, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.border}`, overflowY:"auto", display:"flex", flexDirection:"column" }}>
-          <div style={{ padding:"14px 14px 10px", borderBottom:`1px solid ${C.border}` }}>
+        <div style={{ width:184, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.border}`, overflowY:"auto", display:"flex", flexDirection:"column" }}>
+          <div style={{ padding:"12px 10px 8px", borderBottom:`1px solid ${C.border}` }}>
             <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Sections</div>
             <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Drag sections to reorder</div>
           </div>
-          <div style={{ flex:1, padding:10, overflowY:"auto" }}>
+          <div style={{ flex:1, padding:8, overflowY:"auto" }}>
             <div onClick={()=>{ setActiveSection("name"); openToolbarPanel("header"); }}
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${showHeaderPanel?C.teal:"transparent"}`, background:showHeaderPanel?C.tealLight:"transparent" }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${showHeaderPanel?C.teal:"transparent"}`, background:showHeaderPanel?C.tealLight:"transparent" }}>
               <span style={{ fontSize:12 }}>👤</span>
-              <span style={{ flex:1, fontSize:12, fontWeight:showHeaderPanel?700:400, color:showHeaderPanel?C.tealDark:C.navy }}>Header / Contact</span>
+              <span style={{ flex:1, fontSize:11, fontWeight:showHeaderPanel?700:400, color:showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Header / Contact</span>
             </div>
             {sorted.filter(s=>s.section_type!=="name").map(s => {
               const sid = s.id||s.section_type;
@@ -893,17 +915,17 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const isSidebarDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
               return (
                 <div key={sid} draggable onDragStart={e=>onDragStart(e,sid)} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"grab", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
+                  style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"grab", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
                   <span title="Drag to reorder section" style={{ fontSize:13, color:isSidebarDropTarget?C.teal:C.textLight, lineHeight:1, width:10, textAlign:"center" }}>⋮</span>
                   <span style={{ fontSize:12 }}>{s.icon||"📄"}</span>
-                  <span style={{ flex:1, fontSize:12, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
+                  <span style={{ flex:1, fontSize:11, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
                   {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"👁":"+"}</button>}
                 </div>
               );
             })}
-            <button onClick={addCustomSection} style={{ width:"100%", background:"none", border:`1.5px dashed ${C.border}`, borderRadius:7, padding:"7px", cursor:"pointer", fontSize:11, color:C.textMuted, fontFamily:"inherit", marginTop:6 }}>+ Add Section</button>
+            <button onClick={addCustomSection} style={{ width:"100%", background:"none", border:`1.5px dashed ${C.border}`, borderRadius:7, padding:"6px", cursor:"pointer", fontSize:11, color:C.textMuted, fontFamily:"inherit", marginTop:6 }}>+ Add Section</button>
           </div>
-          <div style={{ padding:"12px 14px", borderTop:`1px solid ${C.border}`, flexShrink:0 }}>
+          <div style={{ padding:"10px", borderTop:`1px solid ${C.border}`, flexShrink:0 }}>
             <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:6 }}>Import Resume</div>
             <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" style={{ display:"none" }} onChange={e=>processFile(e.target.files[0])} />
             <div onClick={()=>fileRef.current?.click()}
@@ -919,14 +941,25 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
 
         {/* Canvas */}
-        <div style={{ flex:1, minWidth:0, overflow:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"32px 32px" }}>
+        <div
+          onClick={e=>{ if(e.target===e.currentTarget){ setActiveSection(null); setActiveJobId(null); closeToolbarPanel(); } }}
+          style={{ flex:1, minWidth:0, overflow:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"36px 48px" }}
+        >
           <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, letterSpacing:"0.04em", textAlign:"center" }}>
             Drag sections to reorder - Click to edit
           </div>
-          <div style={{ width:900, maxWidth:"none", flexShrink:0, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1100 }}>
+          <div style={{ width:920, maxWidth:"none", flexShrink:0, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1100 }}>
 
             {/* Header */}
-            <div style={{ position:"relative", cursor:"pointer", marginBottom:sGap }} onClick={()=>{ openToolbarPanel("header"); setActiveSection("name"); }}>
+            <div
+              style={{ position:"relative", cursor:"pointer", marginBottom:sGap, borderRadius:8, border:`2px solid ${activeSection==="name"||showHeaderPanel?accent:hoveredBlockId==="name"?accent+"66":"transparent"}`, padding:activeSection==="name"||showHeaderPanel||hoveredBlockId==="name"?8:8, marginLeft:-8, marginRight:-8, background:activeSection==="name"||showHeaderPanel?`${accent}06`:"transparent", transition:"border-color 0.15s, background 0.15s" }}
+              onMouseEnter={()=>setHoveredBlockId("name")}
+              onMouseLeave={()=>setHoveredBlockId(null)}
+              onClick={()=>{ openToolbarPanel("header"); setActiveSection("name"); }}
+            >
+              {(activeSection==="name"||showHeaderPanel||hoveredBlockId==="name") && (
+                <div style={{ position:"absolute", top:-10, right:8, background:accent, color:"#fff", borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none" }}>Edit Header</div>
+              )}
               {renderResumeHeader(true)}
             </div>
 
@@ -937,6 +970,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const isActive = activeSection===sid && !showHeaderPanel;
               const isDragging = dragId===sid;
               const isDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
+              const isHovered = hoveredBlockId===sid;
               return (
                 <div key={sid}
                   draggable
@@ -944,10 +978,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                   onDragOver={e=>onDragOver(e,sid)}
                   onDrop={e=>onDrop(e,sid)}
                   onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }}
-                  style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:`2px solid ${C.border}`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
-                  onMouseEnter={e=>{ if(!isActive&&!isDragging&&!isDropTarget) e.currentTarget.style.borderColor=accent+"66"; }}
-                  onMouseLeave={e=>{ if(!isActive&&!isDragging&&!isDropTarget) e.currentTarget.style.borderColor=C.border; }}
+                  onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
+                  style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:isHovered?`2px solid ${accent}66`:`2px solid transparent`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:isHovered?`${accent}04`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
+                  onMouseEnter={()=>setHoveredBlockId(sid)}
+                  onMouseLeave={()=>setHoveredBlockId(null)}
                 >
+                  {(isActive||isHovered) && <div style={{ position:"absolute", top:-10, right:8, background:isActive?accent:"#fff", color:isActive?"#fff":C.slate, border:`1px solid ${isActive?accent:C.border}`, borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", boxShadow:"0 2px 8px rgba(15,23,42,0.08)" }}>Edit</div>}
                   {isDropTarget && <div style={{ position:"absolute", top:-3, left:8, right:8, height:3, background:accent, borderRadius:2 }} />}
                   <div title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:26, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}08`:"#F8FAFC", cursor:"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <div>
