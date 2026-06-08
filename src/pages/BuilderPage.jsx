@@ -98,7 +98,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [resumeName,     setResumeName]      = useState("My Resume");
   const [sections,       setSections]        = useState(null);
   const [headerConfig,   setHeaderConfig]   = useState(null);
-  const [showHeaderPanel, setShowHeaderPanel] = useState(false);
+  const [activeToolbarPanel, setActiveToolbarPanel] = useState(null);
   const [jobEntries,     setJobEntries]      = useState([]); // individual job blocks
   const [templates,      setTemplates]       = useState([]);
   const [selectedTmpl,   setSelectedTmpl]    = useState(null);
@@ -111,9 +111,6 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [importedFile,   setImportedFile]    = useState(null);
   const [parseError,     setParseError]      = useState(null);
   const [dropActive,     setDropActive]      = useState(false);
-  const [showTemplates,  setShowTemplates]   = useState(false);
-  const [showFonts,      setShowFonts]       = useState(false);
-  const [showDesign,     setShowDesign]      = useState(false);
   const [dragId,         setDragId]          = useState(null);
   const [dragJobId,      setDragJobId]       = useState(null);
   const [previewMode,    setPreviewMode]     = useState(false);
@@ -129,6 +126,16 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const fontSize   = tmpl.base_font_size || 13;
   const sGap       = { compact:10, normal:18, spacious:28 }[tmpl.section_spacing] || 18;
   const margins    = tmpl.page_margin === "tight" ? "32px 40px" : tmpl.page_margin === "wide" ? "52px 72px" : "44px 56px";
+  const showHeaderPanel = activeToolbarPanel === "header";
+  const showTemplates = activeToolbarPanel === "templates";
+  const showFonts = activeToolbarPanel === "fonts";
+  const showDesign = activeToolbarPanel === "design";
+  const openToolbarPanel = panel => setActiveToolbarPanel(panel);
+  const closeToolbarPanel = () => setActiveToolbarPanel(null);
+  const enterPreviewMode = () => {
+    closeToolbarPanel();
+    setPreviewMode(true);
+  };
 
   // ── Init ───────────────────────────────────────────────────────────────
   const emptyHeaderConfig = useCallback(() => ({
@@ -511,14 +518,14 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
     if (hdrLayout === "bold_banner") return (
       <div style={{ background:accent, padding:"20px 24px", margin:bannerMargin, borderRadius:"4px 4px 0 0", cursor:editing?"default":"pointer" }}
-        onClick={!editing ? ()=>setShowHeaderPanel(true) : undefined}>
+        onClick={!editing ? ()=>openToolbarPanel("header") : undefined}>
         {inner}
       </div>
     );
 
     return (
       <div style={{ textAlign:align, paddingBottom:14, marginBottom:14, borderBottom:`3px solid ${accent}`, cursor:editing?"default":"pointer" }}
-        onClick={!editing ? ()=>setShowHeaderPanel(true) : undefined}>
+        onClick={!editing ? ()=>openToolbarPanel("header") : undefined}>
         {inner}
       </div>
     );
@@ -645,9 +652,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const RightPanel = () => {
     if (showHeaderPanel) return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Header</div>
-          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit resume-specific name, title, and contact info</div>
+        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Header</div>
+            <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit resume-specific name, title, and contact info</div>
+          </div>
+          <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
         </div>
         <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:10 }}>
           {[
@@ -724,7 +734,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           {sorted.map(s => {
             const sid = s.id||s.section_type;
             return (
-              <div key={sid} onClick={()=>{ setActiveSection(sid); if(s.section_type==="name") setShowHeaderPanel(true); else setShowHeaderPanel(false); }}
+              <div key={sid} onClick={()=>{ setActiveSection(sid); if(s.section_type==="name") openToolbarPanel("header"); else closeToolbarPanel(); }}
                 style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${activeSection===sid?C.teal:"transparent"}`, background:activeSection===sid?C.tealLight:"transparent", opacity:s.is_visible?1:0.4 }}>
                 <span style={{ fontSize:12 }}>{s.icon||"doc"}</span>
                 <span style={{ flex:1, fontSize:12, fontWeight:activeSection===sid?700:400, color:activeSection===sid?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
@@ -763,16 +773,16 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
         <div style={{ display:"flex", gap:4, alignItems:"center" }}>
           {[
-            ["Template", ()=>{ setShowTemplates(!showTemplates); setShowFonts(false); setShowDesign(false); }, showTemplates],
-            ["Header",   ()=>{ setShowHeaderPanel(!showHeaderPanel); setShowTemplates(false); setShowFonts(false); setShowDesign(false); }, showHeaderPanel],
-            ["Font",     ()=>{ setShowFonts(!showFonts); setShowTemplates(false); setShowDesign(false); setShowHeaderPanel(false); }, showFonts],
-            ["Design",   ()=>{ setShowDesign(!showDesign); setShowTemplates(false); setShowFonts(false); setShowHeaderPanel(false); }, showDesign],
+            ["Template", () => openToolbarPanel("templates"), showTemplates],
+            ["Header",   () => openToolbarPanel("header"), showHeaderPanel],
+            ["Font",     () => openToolbarPanel("fonts"), showFonts],
+            ["Design",   () => openToolbarPanel("design"), showDesign],
           ].map(([label, handler, active]) => (
             <button key={label} onClick={handler} style={{ padding:"6px 12px", borderRadius:7, border:`1px solid ${active?C.teal:C.border}`, background:active?C.tealLight:"transparent", fontSize:12, fontWeight:600, color:active?C.tealDark:C.slate, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s" }}>{label}</button>
           ))}
         </div>
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <Btn small variant="secondary" onClick={()=>setPreviewMode(true)}>Preview</Btn>
+          <Btn small variant="secondary" onClick={enterPreviewMode}>Preview</Btn>
           <Btn small variant="secondary" onClick={exportPDF}>PDF</Btn>
           <Btn small disabled={saveState==="saving"} onClick={saveResume}>{saveState==="saving"?"Saving...":"Save"}</Btn>
         </div>
@@ -785,7 +795,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Choose Template</div>
-                <Btn small variant="ghost" onClick={()=>setShowTemplates(false)}>Done</Btn>
+                <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
               </div>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                 {templates.map(t => (
@@ -802,7 +812,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Font</div>
-                <Btn small variant="ghost" onClick={()=>setShowFonts(false)}>Done</Btn>
+                <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
               </div>
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {FONT_PRESETS.map(f => (
@@ -819,7 +829,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                 <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Header Layout</div>
-                <Btn small variant="ghost" onClick={()=>setShowDesign(false)}>Done</Btn>
+                <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
               </div>
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {HEADER_LAYOUTS.map(h => {
@@ -850,7 +860,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Drag on canvas to reorder</div>
           </div>
           <div style={{ flex:1, padding:10, overflowY:"auto" }}>
-            <div onClick={()=>{ setActiveSection("name"); setShowHeaderPanel(true); }}
+            <div onClick={()=>{ setActiveSection("name"); openToolbarPanel("header"); }}
               style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${showHeaderPanel?C.teal:"transparent"}`, background:showHeaderPanel?C.tealLight:"transparent" }}>
               <span style={{ fontSize:12 }}>👤</span>
               <span style={{ flex:1, fontSize:12, fontWeight:showHeaderPanel?700:400, color:showHeaderPanel?C.tealDark:C.navy }}>Header / Contact</span>
@@ -858,7 +868,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             {sorted.filter(s=>s.section_type!=="name").map(s => {
               const sid = s.id||s.section_type;
               return (
-                <div key={sid} onClick={()=>{ setActiveSection(sid); setShowHeaderPanel(false); }}
+                <div key={sid} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
                   style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${activeSection===sid&&!showHeaderPanel?C.teal:"transparent"}`, background:activeSection===sid&&!showHeaderPanel?C.tealLight:"transparent", opacity:s.is_visible?1:0.45 }}>
                   <span style={{ fontSize:12 }}>{s.icon||"📄"}</span>
                   <span style={{ flex:1, fontSize:12, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
@@ -891,7 +901,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           <div style={{ width:"100%", maxWidth:794, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1024 }}>
 
             {/* Header */}
-            <div style={{ position:"relative", cursor:"pointer", marginBottom:sGap }} onClick={()=>{ setShowHeaderPanel(true); setActiveSection("name"); }}>
+            <div style={{ position:"relative", cursor:"pointer", marginBottom:sGap }} onClick={()=>{ openToolbarPanel("header"); setActiveSection("name"); }}>
               <ResumeHeader editing={true} />
             </div>
 
@@ -917,10 +927,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                     {[0,1,2].map(r=>(<div key={r} style={{ display:"flex", gap:2, marginBottom:r<2?2:0 }}><div style={{ width:3,height:3,borderRadius:"50%",background:"#CBD5E1" }}/><div style={{ width:3,height:3,borderRadius:"50%",background:"#CBD5E1" }}/></div>))}
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                    <div onClick={()=>{ setActiveSection(sid); setShowHeaderPanel(false); }} style={{ cursor:"pointer", flex:1 }}>
+                    <div onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }} style={{ cursor:"pointer", flex:1 }}>
                       <SectionHeading label={s.label} />
                     </div>
-                    <button onClick={()=>{ setActiveSection(isActive?"":sid); setShowHeaderPanel(false); }} style={{ background:"none", border:`1px solid ${C.border}`, cursor:"pointer", fontSize:11, color:C.textMuted, padding:"2px 7px", borderRadius:5, fontFamily:"inherit" }}>
+                    <button onClick={()=>{ setActiveSection(isActive?"":sid); closeToolbarPanel(); }} style={{ background:"none", border:`1px solid ${C.border}`, cursor:"pointer", fontSize:11, color:C.textMuted, padding:"2px 7px", borderRadius:5, fontFamily:"inherit" }}>
                       {isActive?"Done":"Edit"}
                     </button>
                   </div>
@@ -932,7 +942,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                   ) : isActive ? (
                     <textarea autoFocus value={s.content?.text||""} onChange={e=>setContent(sid,e.target.value)} style={{ width:"100%", border:"none", outline:"none", resize:"none", fontFamily, fontSize, color:"#334155", lineHeight:1.65, background:"transparent", padding:0, minHeight:60, boxSizing:"border-box" }} rows={5} placeholder={`Enter your ${s.label.toLowerCase()}...`} />
                   ) : (
-                    <div onClick={()=>{ setActiveSection(sid); setShowHeaderPanel(false); }} style={{ fontSize, color:s.content?.text?"#334155":"#CBD5E1", lineHeight:1.65, whiteSpace:"pre-wrap", minHeight:22, cursor:"text" }}>
+                    <div onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }} style={{ fontSize, color:s.content?.text?"#334155":"#CBD5E1", lineHeight:1.65, whiteSpace:"pre-wrap", minHeight:22, cursor:"text" }}>
                       {s.content?.text||`Click to add ${s.label.toLowerCase()}...`}
                     </div>
                   )}
