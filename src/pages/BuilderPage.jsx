@@ -106,6 +106,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [headerLayout,   setHeaderLayout]    = useState(null); // overrides template header_style
   const [activeSection,  setActiveSection]   = useState(null);
   const [activeJobId,    setActiveJobId]     = useState(null);
+  const [inspectorOpen,  setInspectorOpen]   = useState(false);
   const [hoveredBlockId, setHoveredBlockId]  = useState(null);
   const [saveState,      setSaveState]       = useState("idle");
   const [importing,      setImporting]       = useState(false);
@@ -137,6 +138,24 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const showDesign = activeToolbarPanel === "design";
   const openToolbarPanel = panel => setActiveToolbarPanel(panel);
   const closeToolbarPanel = () => setActiveToolbarPanel(null);
+  const showDocumentSettings = () => {
+    setActiveSection(null);
+    setActiveJobId(null);
+    setInspectorOpen(false);
+    closeToolbarPanel();
+  };
+  const selectSection = (sectionId, panel = null) => {
+    setActiveSection(sectionId);
+    setInspectorOpen(true);
+    if (panel) openToolbarPanel(panel);
+    else closeToolbarPanel();
+  };
+  const clearCanvasSelection = () => {
+    setActiveSection(null);
+    setActiveJobId(null);
+    setInspectorOpen(false);
+    closeToolbarPanel();
+  };
   const enterPreviewMode = () => {
     closeToolbarPanel();
     setPreviewMode(true);
@@ -313,7 +332,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     };
     setJobEntries(js => [...js, newJob]);
     setActiveJobId(newJob.id);
-    setActiveSection("experience");
+    selectSection("experience");
   };
 
   const updateJob = (id, field, value) => setJobEntries(js => js.map(j => j.id === id ? { ...j, [field]: value } : j));
@@ -330,7 +349,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       is_required:false, is_visible:true, content:{ text:"" }, display_order:(sections?.length || 0),
     };
     setSections(ss => [...(ss || []), newSec]);
-    setActiveSection(newSec.id);
+    selectSection(newSec.id);
   };
 
   // ── Save ──────────────────────────────────────────────────────────────
@@ -485,15 +504,16 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const contactColor = isBanner ? "rgba(255,255,255,0.75)" : "#64748B";
   const linkColor    = isBanner ? "rgba(255,255,255,0.6)"  : "#94A3B8";
   const inputStyle = (extra={}) => ({ background:"transparent", border:"none", outline:"none", fontFamily, ...extra });
+  const stopInputClick = e => e.stopPropagation();
 
   const renderResumeHeader = (editing) => {
     const nameEl = editing
-      ? <input value={hc.name||""} onChange={e=>setHC("name",e.target.value)} placeholder="Your Name" style={inputStyle({ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor, width:"100%", display:"block" })} />
+      ? <input value={hc.name||""} onClick={stopInputClick} onChange={e=>setHC("name",e.target.value)} placeholder="Your Name" style={inputStyle({ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor, width:"100%", display:"block" })} />
       : <div style={{ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor }}>{hc.name||"Your Name"}</div>;
 
     const headlineEl = (hc.show_headline && (editing || hc.headline)) && (
       editing
-        ? <input value={hc.headline||""} onChange={e=>setHC("headline",e.target.value)} placeholder="Professional Headline (optional)" style={inputStyle({ fontSize:fontSize+1, fontWeight:600, color:subColor, width:"100%", display:"block", marginTop:4 })} />
+        ? <input value={hc.headline||""} onClick={stopInputClick} onChange={e=>setHC("headline",e.target.value)} placeholder="Professional Headline (optional)" style={inputStyle({ fontSize:fontSize+1, fontWeight:600, color:subColor, width:"100%", display:"block", marginTop:4 })} />
         : hc.headline ? <div style={{ fontSize:fontSize+1, fontWeight:600, color:subColor, marginTop:4 }}>{hc.headline}</div> : null
     );
 
@@ -512,13 +532,13 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
     const contactLineEl = editing ? (
       <div style={{ display:"flex", gap:10, marginTop:5, flexWrap:"wrap" }}>
-        {hc.show_email    && <input value={hc.email||""}    onChange={e=>setHC("email",e.target.value)}    placeholder="email@example.com" style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:140 })} />}
-        {hc.show_phone    && <input value={hc.phone||""}    onChange={e=>setHC("phone",e.target.value)}    placeholder="Phone"            style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:110 })} />}
-        {hc.show_location && <input value={hc.location||""} onChange={e=>setHC("location",e.target.value)} placeholder="City, State"      style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:110 })} />}
-        {hc.show_linkedin && <input value={hc.linkedin||""} onChange={e=>setHC("linkedin",e.target.value)} placeholder="linkedin.com/in/…" style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:140 })} />}
-        {hc.show_website  && <input value={hc.website||""}  onChange={e=>setHC("website",e.target.value)}  placeholder="yoursite.com"     style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:120 })} />}
-        {hc.show_github   && <input value={hc.github||""}   onChange={e=>setHC("github",e.target.value)}   placeholder="github.com/…"     style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:120 })} />}
-        {hc.show_custom   && <input value={hc.custom_contact_line||""} onChange={e=>setHC("custom_contact_line",e.target.value)} placeholder="Custom contact info" style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:140 })} />}
+        {hc.show_email    && <input value={hc.email||""}    onClick={stopInputClick} onChange={e=>setHC("email",e.target.value)}    placeholder="email@example.com" style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:140 })} />}
+        {hc.show_phone    && <input value={hc.phone||""}    onClick={stopInputClick} onChange={e=>setHC("phone",e.target.value)}    placeholder="Phone"            style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:110 })} />}
+        {hc.show_location && <input value={hc.location||""} onClick={stopInputClick} onChange={e=>setHC("location",e.target.value)} placeholder="City, State"      style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:110 })} />}
+        {hc.show_linkedin && <input value={hc.linkedin||""} onClick={stopInputClick} onChange={e=>setHC("linkedin",e.target.value)} placeholder="linkedin.com/in/…" style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:140 })} />}
+        {hc.show_website  && <input value={hc.website||""}  onClick={stopInputClick} onChange={e=>setHC("website",e.target.value)}  placeholder="yoursite.com"     style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:120 })} />}
+        {hc.show_github   && <input value={hc.github||""}   onClick={stopInputClick} onChange={e=>setHC("github",e.target.value)}   placeholder="github.com/…"     style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:120 })} />}
+        {hc.show_custom   && <input value={hc.custom_contact_line||""} onClick={stopInputClick} onChange={e=>setHC("custom_contact_line",e.target.value)} placeholder="Custom contact info" style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:140 })} />}
       </div>
     ) : (
       <>
@@ -575,7 +595,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         }}
         onMouseEnter={e => { if(!isActiveJob) e.currentTarget.style.borderColor = accent+"66"; }}
         onMouseLeave={e => { if(!isActiveJob) e.currentTarget.style.borderColor = C.border; }}
-        onClick={() => { setActiveJobId(job.id); setActiveSection("experience"); }}
+        onClick={() => { setActiveJobId(job.id); selectSection("experience"); }}
       >
         {/* Drop indicator */}
         {isDropTarget && (
@@ -728,7 +748,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         <div style={{ padding:16 }}>
           <button onClick={addJob} style={{ width:"100%", padding:"9px", background:C.teal, border:"none", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:700, color:"#fff", fontFamily:"inherit", marginBottom:12 }}>Add Job</button>
           {sortedJobs.map(j => (
-            <div key={j.id} onClick={()=>setActiveJobId(j.id)}
+            <div key={j.id} onClick={()=>{ setActiveJobId(j.id); setInspectorOpen(true); }}
               style={{ padding:"8px 10px", borderRadius:7, border:`1px solid ${activeJobId===j.id?C.teal:C.border}`, background:activeJobId===j.id?C.tealLight:"transparent", cursor:"pointer", marginBottom:6 }}>
               <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{j.job_title||"(no title)"}</div>
               <div style={{ fontSize:11, color:C.textMuted }}>{j.company||""}</div>
@@ -798,7 +818,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   };
 
   return (
-    <div className="jobvair-builder-shell" style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 60px)", overflow:"hidden", margin:"-28px -32px", fontFamily:"inherit", width:"calc(100% + 64px)", maxWidth:"none", textAlign:"left" }}>
+    <div className="jobvair-builder-shell" style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 60px)", overflow:"hidden", margin:"-28px -32px", fontFamily:"inherit", width:"calc(100vw - 72px)", maxWidth:"none", textAlign:"left" }}>
 
       {/* Top bar */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 20px", background:"#fff", borderBottom:`1px solid ${C.border}`, flexShrink:0, gap:8, flexWrap:"wrap" }}>
@@ -809,8 +829,9 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
         <div style={{ display:"flex", gap:4, alignItems:"center" }}>
           {[
+            ["Document", showDocumentSettings, !activeSection && !activeToolbarPanel],
             ["Template", () => openToolbarPanel("templates"), showTemplates],
-            ["Header",   () => { setActiveSection("name"); openToolbarPanel("header"); }, showHeaderPanel],
+            ["Header",   () => selectSection("name", "header"), showHeaderPanel],
             ["Font",     () => openToolbarPanel("fonts"), showFonts],
             ["Design",   () => openToolbarPanel("design"), showDesign],
           ].map(([label, handler, active]) => (
@@ -899,7 +920,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Drag sections to reorder</div>
           </div>
           <div style={{ flex:1, padding:8, overflowY:"auto" }}>
-            <div onClick={()=>{ setActiveSection("name"); openToolbarPanel("header"); }}
+            <div onClick={()=>selectSection("name", "header")}
               style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${showHeaderPanel?C.teal:"transparent"}`, background:showHeaderPanel?C.tealLight:"transparent" }}>
               <span style={{ fontSize:12 }}>👤</span>
               <span style={{ flex:1, fontSize:11, fontWeight:showHeaderPanel?700:400, color:showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Header / Contact</span>
@@ -910,7 +931,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const isDraggingSideSection = dragId===sid;
               const isSidebarDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
               return (
-                <div key={sid} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
+                <div key={sid} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onClick={()=>selectSection(sid)}
                   style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
                   <span draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" style={{ fontSize:14, color:isSidebarDropTarget||isDraggingSideSection?C.teal:C.textLight, lineHeight:1, width:14, textAlign:"center", cursor:isDraggingSideSection?"grabbing":"grab", fontWeight:800 }}>⋮⋮</span>
                   <span style={{ fontSize:12 }}>{s.icon||"📄"}</span>
@@ -938,25 +959,25 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
         {/* Canvas */}
         <div
-          onClick={e=>{ if(e.target===e.currentTarget){ setActiveSection(null); setActiveJobId(null); closeToolbarPanel(); } }}
-          style={{ flex:1, minWidth:0, overflow:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"36px 48px" }}
+          onClick={e=>{ if(e.target===e.currentTarget) clearCanvasSelection(); }}
+          style={{ flex:1, minWidth:0, overflow:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"40px 64px" }}
         >
           <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, letterSpacing:"0.04em", textAlign:"center" }}>
             Drag sections to reorder - Click to edit
           </div>
-          <div style={{ width:920, maxWidth:"none", flexShrink:0, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1100 }}>
+          <div style={{ width:980, maxWidth:"none", flexShrink:0, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1100 }}>
 
             {/* Header */}
             <div
-              style={{ position:"relative", cursor:"pointer", marginBottom:sGap, borderRadius:8, border:`2px solid ${activeSection==="name"||showHeaderPanel?accent:hoveredBlockId==="name"?accent+"66":"transparent"}`, padding:activeSection==="name"||showHeaderPanel||hoveredBlockId==="name"?8:8, marginLeft:-8, marginRight:-8, background:activeSection==="name"||showHeaderPanel?`${accent}06`:"transparent", transition:"border-color 0.15s, background 0.15s" }}
+              style={{ position:"relative", cursor:"pointer", marginBottom:sGap, borderRadius:8, border:`2px solid ${activeSection==="name"||showHeaderPanel?accent:hoveredBlockId==="name"?accent+"66":"transparent"}`, padding:8, marginLeft:-8, marginRight:-8, background:activeSection==="name"||showHeaderPanel?`${accent}06`:"transparent", transition:"border-color 0.15s, background 0.15s" }}
               onMouseEnter={()=>setHoveredBlockId("name")}
               onMouseLeave={()=>setHoveredBlockId(null)}
-              onClick={()=>{ openToolbarPanel("header"); setActiveSection("name"); }}
+              onClick={()=>selectSection("name", "header")}
             >
-              {(activeSection==="name"||showHeaderPanel||hoveredBlockId==="name") && (
-                <div style={{ position:"absolute", top:-10, right:8, background:accent, color:"#fff", borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none" }}>Edit Header</div>
-              )}
-              {renderResumeHeader(true)}
+              <div style={{ position:"absolute", top:-10, right:8, background:accent, color:"#fff", borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", opacity:activeSection==="name"||showHeaderPanel||hoveredBlockId==="name"?1:0, transition:"opacity 0.12s" }}>Edit Header</div>
+              <div key="stable-resume-header-editor">
+                {renderResumeHeader(true)}
+              </div>
             </div>
 
             {/* Sections */}
@@ -971,7 +992,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                 <div key={sid}
                   onDragOver={e=>onDragOver(e,sid)}
                   onDrop={e=>onDrop(e,sid)}
-                  onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
+                  onClick={()=>selectSection(sid)}
                   style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:isHovered?`2px solid ${accent}66`:`2px solid transparent`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:isHovered?`${accent}04`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
                   onMouseEnter={()=>setHoveredBlockId(sid)}
                   onMouseLeave={()=>setHoveredBlockId(null)}
@@ -982,10 +1003,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                     <div style={{ color:isDragging||isDropTarget?accent:"#64748B", fontSize:17, lineHeight:1, fontWeight:800 }}>⋮⋮</div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                    <div onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }} style={{ cursor:"pointer", flex:1 }}>
+                    <div onClick={()=>selectSection(sid)} style={{ cursor:"pointer", flex:1 }}>
                       <SectionHeading label={s.label} />
                     </div>
-                    <button onClick={()=>{ setActiveSection(isActive?"":sid); closeToolbarPanel(); }} style={{ background:"none", border:`1px solid ${C.border}`, cursor:"pointer", fontSize:11, color:C.textMuted, padding:"2px 7px", borderRadius:5, fontFamily:"inherit" }}>
+                    <button onClick={()=>{ if(isActive) clearCanvasSelection(); else selectSection(sid); }} style={{ background:"none", border:`1px solid ${C.border}`, cursor:"pointer", fontSize:11, color:C.textMuted, padding:"2px 7px", borderRadius:5, fontFamily:"inherit" }}>
                       {isActive?"Done":"Edit"}
                     </button>
                   </div>
@@ -997,7 +1018,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                   ) : isActive ? (
                     <textarea autoFocus value={s.content?.text||""} onChange={e=>setContent(sid,e.target.value)} style={{ width:"100%", border:"none", outline:"none", resize:"none", fontFamily, fontSize, color:"#334155", lineHeight:1.65, background:"transparent", padding:0, minHeight:60, boxSizing:"border-box" }} rows={5} placeholder={`Enter your ${s.label.toLowerCase()}...`} />
                   ) : (
-                    <div onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }} style={{ fontSize, color:s.content?.text?"#334155":"#CBD5E1", lineHeight:1.65, whiteSpace:"pre-wrap", minHeight:22, cursor:"text" }}>
+                    <div onClick={()=>selectSection(sid)} style={{ fontSize, color:s.content?.text?"#334155":"#CBD5E1", lineHeight:1.65, whiteSpace:"pre-wrap", minHeight:22, cursor:"text" }}>
                       {s.content?.text||`Click to add ${s.label.toLowerCase()}...`}
                     </div>
                   )}
@@ -1013,15 +1034,17 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
 
         {/* Right panel */}
-        <div style={{ width:260, flexShrink:0, background:"#fff", borderLeft:`1px solid ${C.border}`, overflowY:"auto", display:"flex", flexDirection:"column" }}>
-          {renderRightPanel()}
-          {!isPaid && (
-            <div style={{ margin:12, padding:"10px 12px", background:"#FFFBEB", border:`1px solid #F6E05E`, borderRadius:8 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#92600A", marginBottom:4 }}>Pro Features</div>
-              <div style={{ fontSize:11, color:"#92600A", lineHeight:1.5 }}>Banner headers, sidebar layouts, premium templates.</div>
-            </div>
-          )}
-        </div>
+        {inspectorOpen && (
+          <div style={{ width:260, flexShrink:0, background:"#fff", borderLeft:`1px solid ${C.border}`, overflowY:"auto", display:"flex", flexDirection:"column" }}>
+            {renderRightPanel()}
+            {!isPaid && (
+              <div style={{ margin:12, padding:"10px 12px", background:"#FFFBEB", border:`1px solid #F6E05E`, borderRadius:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#92600A", marginBottom:4 }}>Pro Features</div>
+                <div style={{ fontSize:11, color:"#92600A", lineHeight:1.5 }}>Banner headers, sidebar layouts, premium templates.</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
