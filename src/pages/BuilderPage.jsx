@@ -565,13 +565,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     );
     return (
       <div
-        draggable
-        onDragStart={e => onJobDragStart(e, job.id)}
         onDragOver={e => onJobDragOver(e, job.id)}
         onDrop={e => onJobDrop(e, job.id)}
-        onDragEnd={() => { setDragJobId(null); setJobDropTargetId(null); }}
         style={{
-          marginBottom:10, padding:"10px 10px 10px 32px", borderRadius:8, position:"relative",
+          marginBottom:10, padding:"10px 10px 10px 38px", borderRadius:8, position:"relative",
           border:`1px solid ${isActiveJob ? accent : isDropTarget ? accent : isDraggingJob ? accent+"88" : C.border}`,
           background: isActiveJob ? `${accent}06` : isDropTarget ? `${accent}08` : isDraggingJob ? `${accent}11` : "#FAFAFA",
           opacity: isDraggingJob ? 0.4 : 1, cursor:"text", transition:"border-color 0.15s, background 0.15s",
@@ -582,20 +579,19 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       >
         {/* Drop indicator */}
         {isDropTarget && (
-          <div style={{ position:"absolute", top:-1, left:0, right:0, height:2, background:accent, borderRadius:1 }} />
+          <div style={{ position:"absolute", top:-4, left:6, right:6, height:4, background:accent, borderRadius:999, boxShadow:`0 0 0 3px ${accent}22` }} />
         )}
 
         {/* Dot-grid drag handle */}
         <div
-          style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", cursor:"grab", padding:"4px 2px", userSelect:"none" }}
+          draggable
+          onDragStart={e => onJobDragStart(e, job.id)}
+          onDragEnd={() => { setDragJobId(null); setJobDropTargetId(null); }}
+          onClick={e => e.stopPropagation()}
+          style={{ position:"absolute", left:7, top:"50%", transform:"translateY(-50%)", cursor:isDraggingJob?"grabbing":"grab", width:22, minHeight:44, border:`1px solid ${isDraggingJob||isDropTarget?accent:C.border}`, borderRadius:7, background:isDraggingJob||isDropTarget?`${accent}10`:"#fff", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center" }}
           title="Drag to reorder jobs"
         >
-          {[0,1,2].map(row => (
-            <div key={row} style={{ display:"flex", gap:2, marginBottom:row<2?2:0 }}>
-              <div style={{ width:3, height:3, borderRadius:"50%", background:"#CBD5E1" }} />
-              <div style={{ width:3, height:3, borderRadius:"50%", background:"#CBD5E1" }} />
-            </div>
-          ))}
+          <div style={{ color:isDraggingJob||isDropTarget?accent:"#64748B", fontSize:16, lineHeight:1, fontWeight:800 }}>⋮⋮</div>
         </div>
 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:isActiveJob?10:0 }}>
@@ -914,9 +910,9 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const isDraggingSideSection = dragId===sid;
               const isSidebarDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
               return (
-                <div key={sid} draggable onDragStart={e=>onDragStart(e,sid)} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
-                  style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"grab", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
-                  <span title="Drag to reorder section" style={{ fontSize:13, color:isSidebarDropTarget?C.teal:C.textLight, lineHeight:1, width:10, textAlign:"center" }}>⋮</span>
+                <div key={sid} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
+                  style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
+                  <span draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" style={{ fontSize:14, color:isSidebarDropTarget||isDraggingSideSection?C.teal:C.textLight, lineHeight:1, width:14, textAlign:"center", cursor:isDraggingSideSection?"grabbing":"grab", fontWeight:800 }}>⋮⋮</span>
                   <span style={{ fontSize:12 }}>{s.icon||"📄"}</span>
                   <span style={{ flex:1, fontSize:11, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
                   {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"👁":"+"}</button>}
@@ -973,22 +969,17 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const isHovered = hoveredBlockId===sid;
               return (
                 <div key={sid}
-                  draggable
-                  onDragStart={e=>onDragStart(e,sid)}
                   onDragOver={e=>onDragOver(e,sid)}
                   onDrop={e=>onDrop(e,sid)}
-                  onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }}
                   onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }}
                   style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:isHovered?`2px solid ${accent}66`:`2px solid transparent`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:isHovered?`${accent}04`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
                   onMouseEnter={()=>setHoveredBlockId(sid)}
                   onMouseLeave={()=>setHoveredBlockId(null)}
                 >
                   {(isActive||isHovered) && <div style={{ position:"absolute", top:-10, right:8, background:isActive?accent:"#fff", color:isActive?"#fff":C.slate, border:`1px solid ${isActive?accent:C.border}`, borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", boxShadow:"0 2px 8px rgba(15,23,42,0.08)" }}>Edit</div>}
-                  {isDropTarget && <div style={{ position:"absolute", top:-3, left:8, right:8, height:3, background:accent, borderRadius:2 }} />}
-                  <div title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:26, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}08`:"#F8FAFC", cursor:"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <div>
-                      {[0,1,2].map(r=>(<div key={r} style={{ display:"flex", gap:3, marginBottom:r<2?3:0 }}><div style={{ width:4,height:4,borderRadius:"50%",background:isDragging||isDropTarget?accent:"#94A3B8" }}/><div style={{ width:4,height:4,borderRadius:"50%",background:isDragging||isDropTarget?accent:"#94A3B8" }}/></div>))}
-                    </div>
+                  {isDropTarget && <div style={{ position:"absolute", top:-5, left:10, right:10, height:5, background:accent, borderRadius:999, boxShadow:`0 0 0 4px ${accent}22` }} />}
+                  <div draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:28, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}10`:"#fff", cursor:isDragging?"grabbing":"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isActive||isHovered?"0 2px 8px rgba(15,23,42,0.08)":"none" }}>
+                    <div style={{ color:isDragging||isDropTarget?accent:"#64748B", fontSize:17, lineHeight:1, fontWeight:800 }}>⋮⋮</div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div onClick={()=>{ setActiveSection(sid); closeToolbarPanel(); }} style={{ cursor:"pointer", flex:1 }}>
