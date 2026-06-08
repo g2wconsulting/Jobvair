@@ -129,22 +129,19 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const fontSize   = tmpl.base_font_size || 13;
   const sGap       = { compact:10, normal:18, spacious:28 }[tmpl.section_spacing] || 18;
   const margins    = tmpl.page_margin === "tight" ? "32px 40px" : tmpl.page_margin === "wide" ? "52px 72px" : "44px 56px";
-  const contactFields = headerConfig;
 
   // ── Init ───────────────────────────────────────────────────────────────
-  const defaultHeaderConfig = useCallback(() => ({
-    // Content fields — pre-filled from profile but resume-specific
-    name:               profile.name || "",
-    headline:           "",          // intentionally blank — user should set per resume
-    email:              profile.email || "",
-    phone:              profile.phone || "",
-    location:           profile.location || "",
+  const emptyHeaderConfig = useCallback(() => ({
+    name:               "",
+    headline:           "",
+    email:              "",
+    phone:              "",
+    location:           "",
     linkedin:           "",
     website:            "",
     github:             "",
     custom_contact_line: "",
-    // Visibility flags — all on by default except custom and headline
-    show_headline:      false,       // off by default — user opts in
+    show_headline:      false,
     show_email:         true,
     show_phone:         true,
     show_location:      true,
@@ -153,7 +150,37 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     show_github:        false,
     show_custom:        false,
     layout:             "left",
-  }), [profile]);
+  }), []);
+
+  const defaultHeaderConfig = useCallback(() => ({
+    ...emptyHeaderConfig(),
+    // Content fields are pre-filled from profile for new resumes only.
+    name:               profile.name || "",
+    email:              profile.email || "",
+    phone:              profile.phone || "",
+    location:           profile.location || "",
+  }), [emptyHeaderConfig, profile]);
+
+  const normalizeHeaderConfig = useCallback((saved = {}) => {
+    const base = emptyHeaderConfig();
+    const cfg = saved || {};
+    return {
+      ...base,
+      ...cfg,
+      headline: cfg.headline ?? base.headline,
+      custom_contact_line: cfg.custom_contact_line ?? base.custom_contact_line,
+      show_headline: cfg.show_headline ?? base.show_headline,
+      show_email: cfg.show_email ?? base.show_email,
+      show_phone: cfg.show_phone ?? base.show_phone,
+      show_location: cfg.show_location ?? base.show_location,
+      show_linkedin: cfg.show_linkedin ?? base.show_linkedin,
+      show_website: cfg.show_website ?? base.show_website,
+      show_github: cfg.show_github ?? base.show_github,
+      show_custom: cfg.show_custom ?? base.show_custom,
+    };
+  }, [emptyHeaderConfig]);
+
+  const contactFields = normalizeHeaderConfig(headerConfig);
 
   const buildDefaultSections = useCallback(() => DEFAULT_SECTIONS.map((s, i) => {
     let text = "";
@@ -194,7 +221,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           if (secs?.length) {
             setSections(secs);
             const nameSection = secs.find(s => s.section_type === "name");
-            setHeaderConfig(nameSection?.content || defaultHeaderConfig());
+            setHeaderConfig(normalizeHeaderConfig(nameSection?.content));
             // Restore custom font and header layout from layout_config
             const layoutCfg = secs.find(s => s.section_type === "name")?.layout_config_json || {};
             if (layoutCfg.custom_font)   setCustomFont(layoutCfg.custom_font);
@@ -289,18 +316,26 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     setSaveState("saving");
     try {
       let rid = resumeId;
+      const savedHeaderConfig = normalizeHeaderConfig(headerConfig || (!rid ? defaultHeaderConfig() : {}));
       if (rid) {
         await supabase.from("resumes").update({ name:resumeName, updated_at:new Date().toISOString(), selected_template_id:selectedTmpl?.id||null }).eq("id", rid);
       } else {
-        const { data } = await supabase.from("resumes").insert({ user_id:user.id, name:resumeName, template:selectedTmpl?.slug||"modern", selected_template_id:selectedTmpl?.id||null, is_primary:false, contact_fields:contactFields, sections:[] }).select().single();
+        const { data } = await supabase.from("resumes").insert({ user_id:user.id, name:resumeName, template:selectedTmpl?.slug||"modern", selected_template_id:selectedTmpl?.id||null, is_primary:false, contact_fields:savedHeaderConfig, sections:[] }).select().single();
         rid = data?.id; setResumeId(rid);
       }
       if (!rid) throw new Error("No resume ID");
 
       // Save sections (store custom font + header layout in name section layout_config)
-      const allSections = (sections || []).map(s => ({
+      const sourceSections = sections?.length ? sections : buildDefaultSections();
+      const sectionsWithHeader = sourceSections.some(s => s.section_type === "name")
+        ? sourceSections
+        : [
+            { ...DEFAULT_SECTIONS[0], id:"local_name", resume_id:rid, user_id:user.id, content:{}, display_order:0 },
+            ...sourceSections.map((s, i) => ({ ...s, display_order:i + 1 })),
+          ];
+      const allSections = sectionsWithHeader.map(s => ({
         resume_id:    rid, user_id:user.id, section_type:s.section_type, label:s.label,
-        content:      s.section_type === "name" ? headerConfig : (s.content || {}),
+        content:      s.section_type === "name" ? savedHeaderConfig : (s.content || {}),
         display_order:s.display_order, is_visible:s.is_visible, is_required:s.is_required||false,
         layout_config_json: s.section_type === "name" ? { custom_font:customFont, header_layout:headerLayout } : (s.layout_config_json||{}),
       }));
@@ -360,15 +395,18 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       const parsed = await edgeFetch("parse-resume", { user_id:userId, storage_path:storagePath, original_filename:file.name, parsed_resume_id:rowData.id });
 
       // Update header config from parsed data (only fill empty fields)
-      setHeaderConfig(f => ({
-        ...f,
-        name:     parsed.full_name || f.name,
-        email:    parsed.email     || f.email,
-        phone:    parsed.phone     || f.phone,
-        location: parsed.location  || f.location,
-        show_phone:    !!(parsed.phone    || f.phone),
-        show_location: !!(parsed.location || f.location),
-      }));
+      setHeaderConfig(f => {
+        const current = normalizeHeaderConfig(f);
+        return {
+          ...current,
+          name:     current.name     || parsed.full_name || "",
+          email:    current.email    || parsed.email     || "",
+          phone:    current.phone    || parsed.phone     || "",
+          location: current.location || parsed.location  || "",
+          show_phone:    !!(current.phone    || parsed.phone),
+          show_location: !!(current.location || parsed.location),
+        };
+      });
 
       // Update text sections
       setSections(ss => ss.map(s => {
@@ -396,7 +434,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
   const sorted = sections ? [...sections].sort((a, b) => a.display_order - b.display_order) : [];
   const sortedJobs = [...jobEntries].sort((a, b) => a.display_order - b.display_order);
-  const hc = headerConfig || {}; // shorthand for header config
+  const hc = normalizeHeaderConfig(headerConfig); // shorthand for header config
 
   // ── Section heading (respects template) ───────────────────────────────
   const SectionHeading = ({ label }) => {
@@ -417,7 +455,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
   // ── Resume header renderer ─────────────────────────────────────────────
   // Reads headerConfig visibility flags; editing=true shows inline inputs
-  const setHC = (field, val) => setHeaderConfig(h => ({ ...h, [field]: val }));
+  const setHC = (field, val) => setHeaderConfig(h => ({ ...normalizeHeaderConfig(h), [field]: val }));
   const isBanner = hdrLayout === "bold_banner";
   const textColor = isBanner ? "#fff" : "#0F172A";
   const subColor  = isBanner ? "rgba(255,255,255,0.85)" : accent;
@@ -609,11 +647,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
         <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
           <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Header</div>
-          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit contact info and visibility</div>
+          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit resume-specific name, title, and contact info</div>
         </div>
         <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:10 }}>
           {[
-            ["name","Full Name","text"],["headline","Headline / Title","text"],["email","Email","email"],
+            ["name","Full Name","text"],["headline","Optional Headline / Title","text"],["email","Email","email"],
             ["phone","Phone","tel"],["location","Location","text"],["linkedin","LinkedIn URL","text"],
             ["website","Website","text"],["github","GitHub","text"],["custom_contact_line","Custom Line","text"],
           ].map(([field,label,type]) => (
@@ -626,7 +664,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           <div style={{ paddingTop:12, borderTop:`1px solid ${C.border}` }}>
             <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:8 }}>Show / Hide</div>
             {[
-              ["show_headline","Headline"],["show_email","Email"],["show_phone","Phone"],
+              ["show_headline","Optional Headline / Title"],["show_email","Email"],["show_phone","Phone"],
               ["show_location","Location"],["show_linkedin","LinkedIn"],["show_website","Website"],
               ["show_github","GitHub"],["show_custom","Custom Line"],
             ].map(([field,label]) => (
