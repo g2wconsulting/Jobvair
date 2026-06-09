@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { C } from "../constants/appConstants.js";
 import { Btn } from "./ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
+import { persistResumeEnrichment } from "../lib/profileEnrichment.js";
 
 export default function ResumeUploadZone({ user, onParsed }) {
   const [active, setActive]     = useState(false);
@@ -73,7 +74,7 @@ export default function ResumeUploadZone({ user, onParsed }) {
       const resumeName = f.name.replace(/\.(pdf|docx|doc|txt)$/i, "").replace(/_/g, " ");
       const hasResumes = await supabase.from("resumes").select("id").eq("user_id", userId).limit(1);
       const isPrimary  = !hasResumes.data?.length; // first resume becomes primary
-      await supabase.from("resumes").insert({
+      const { data: resumeRow, error: resumeError } = await supabase.from("resumes").insert({
         user_id:        userId,
         name:           resumeName,
         template:       "modern",
@@ -87,12 +88,22 @@ export default function ResumeUploadZone({ user, onParsed }) {
           phone:    parsed.phone      || "",
           location: parsed.location   || "",
         },
+      }).select("id").single();
+      if (resumeError) throw new Error(`Resume creation failed: ${resumeError.message}`);
+
+      // Step 5 - Persist Candidate Intelligence enrichment so parsed profile
+      // data survives refreshes and powers future matching/search.
+      await persistResumeEnrichment({
+        userId,
+        parsed,
+        parsedResumeId: row.id,
+        sourceResumeId: resumeRow?.id,
       });
 
       setDone(true);
 
-      // Pass results up to parent to fill in profile sections
-      if (onParsed) onParsed(parsed);
+      // Pass results up to parent to refresh profile state from Supabase.
+      if (onParsed) await onParsed(parsed);
     } catch (err) {
       setUploading(false);
       setParsing(false);

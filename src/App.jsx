@@ -139,6 +139,17 @@ export default function App() {
     setProfileForm(prev => ({ ...(prev ?? {}), ...u }));
   };
 
+  const handleParsedResume = async (parsed) => {
+    applyParsedResume(parsed);
+    if (authUser?.id) {
+      await initProfile(
+        authUser.id,
+        authUser.email,
+        authUser.user_metadata?.full_name ?? ""
+      );
+    }
+  };
+
   // ── Loading screen while we check for an existing session ─────────────────
   if (authUser === undefined) {
     return (
@@ -199,7 +210,7 @@ export default function App() {
               profileCerts={profileCerts}
               setProfileCerts={setProfileCerts}
               onSave={() => saveProfile(authUser.id)}
-              onParsedResume={applyParsedResume}
+              onParsedResume={handleParsedResume}
             />
           )}
           {page === "resumes"     && <ResumesPage onNav={setPage} user={user} />}

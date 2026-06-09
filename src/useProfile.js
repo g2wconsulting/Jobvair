@@ -13,6 +13,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "./supabaseClient";
+import { updateProfileScores } from "./lib/profileScoring.js";
 
 const EMPTY_FORM = {
   name: "", email: "", phone: "", location: "",
@@ -232,6 +233,8 @@ export function useProfile() {
           await supabase.from("candidate_certifications").insert(row);
         }
       }
+
+      await updateProfileScores(userId);
 
       return { error: null };
     } catch (err) {
