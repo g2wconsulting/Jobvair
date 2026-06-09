@@ -42,6 +42,40 @@ const mergeField = (existing, field, incoming, allowOverwrite) => {
 
 const sameLower = (a, b) => normalizeSkillName(a) === normalizeSkillName(b);
 
+async function insertSkillEvidenceRows(rows) {
+  if (!rows.length) return;
+
+  const { error } = await supabase
+    .from("candidate_skill_evidence")
+    .insert(rows);
+  if (!error) return;
+
+  console.error("[profileEnrichment] candidate_skill_evidence full insert failed:", error.message);
+
+  const minimalRows = rows.map(row => ({
+    user_id: row.user_id,
+    candidate_skill_id: row.candidate_skill_id,
+    source_type: row.source_type,
+    source_table: row.source_table,
+    source_id: row.source_id,
+    source_parsed_resume_id: row.source_parsed_resume_id,
+    source_resume_id: row.source_resume_id,
+    skill_name: row.skill_name,
+    normalized_skill_name: row.normalized_skill_name,
+    evidence_text: row.evidence_text,
+    last_used_date: row.last_used_date,
+    years_inferred: row.years_inferred,
+    confidence_score: row.confidence_score,
+  }));
+
+  const { error: minimalError } = await supabase
+    .from("candidate_skill_evidence")
+    .insert(minimalRows);
+  if (minimalError) {
+    throw new Error(`Skill evidence insert failed: ${minimalError.message}`);
+  }
+}
+
 function buildProfilePatch(userId, parsed) {
   return {
     id: userId,
@@ -175,10 +209,7 @@ async function persistSkills({ userId, parsed, parsedResumeId, sourceResumeId })
     },
   }));
 
-  const { error: evidenceError } = await supabase
-    .from("candidate_skill_evidence")
-    .insert(evidenceRows);
-  if (evidenceError) throw evidenceError;
+  await insertSkillEvidenceRows(evidenceRows);
 
   for (const { skill } of savedSkills) {
     await supabase
@@ -329,11 +360,18 @@ async function persistCertifications({ userId, parsed, parsedResumeId, sourceRes
 export async function persistResumeEnrichment({ userId, parsed, parsedResumeId, sourceResumeId }) {
   if (!userId || !parsed) return;
 
+  let enrichmentError = null;
+
   await persistProfile(userId, parsed);
-  await persistSkills({ userId, parsed, parsedResumeId, sourceResumeId });
-  await persistWork({ userId, parsed, parsedResumeId, sourceResumeId });
-  await persistEducation({ userId, parsed, parsedResumeId, sourceResumeId });
-  await persistCertifications({ userId, parsed, parsedResumeId, sourceResumeId });
+  try {
+    await persistSkills({ userId, parsed, parsedResumeId, sourceResumeId });
+    await persistWork({ userId, parsed, parsedResumeId, sourceResumeId });
+    await persistEducation({ userId, parsed, parsedResumeId, sourceResumeId });
+    await persistCertifications({ userId, parsed, parsedResumeId, sourceResumeId });
+  } catch (err) {
+    enrichmentError = err;
+    console.error("[profileEnrichment] enrichment persistence failed:", err.message);
+  }
 
   await supabase
     .from("parsed_resumes")
@@ -346,4 +384,6 @@ export async function persistResumeEnrichment({ userId, parsed, parsedResumeId, 
     .eq("user_id", userId);
 
   await updateProfileScores(userId);
+
+  if (enrichmentError) throw enrichmentError;
 }

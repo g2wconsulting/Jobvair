@@ -19,6 +19,27 @@ function average(values) {
   return nums.reduce((sum, value) => sum + value, 0) / nums.length;
 }
 
+const optionalReadError = error => {
+  const message = String(error?.message || "");
+  return (
+    error?.code === "PGRST200" ||
+    error?.code === "PGRST204" ||
+    message.includes("schema cache") ||
+    message.includes("does not exist") ||
+    message.includes("permission denied")
+  );
+};
+
+const optionalWriteError = error => {
+  const message = String(error?.message || "");
+  return (
+    error?.code === "PGRST204" ||
+    message.includes("schema cache") ||
+    message.includes("Could not find") ||
+    message.includes("does not exist")
+  );
+};
+
 function buildCompletenessBreakdown({ profile, skills, work, education, certifications, resumes, verification }) {
   const primarySkills = skills.filter(skill => skill.is_primary);
   const checks = [
@@ -154,10 +175,15 @@ export async function calculateProfileScores(userId) {
     supabase.from("identity_verifications").select("status").eq("user_id", userId).maybeSingle(),
   ]);
 
-  const errors = [profileRes, skillsRes, workRes, educationRes, certificationsRes, resumesRes, evidenceRes, verificationRes]
+  const requiredErrors = [profileRes, skillsRes, workRes, educationRes, certificationsRes, resumesRes]
     .map(result => result.error)
     .filter(Boolean);
-  if (errors.length) throw errors[0];
+  if (requiredErrors.length) throw requiredErrors[0];
+
+  if (evidenceRes.error && !optionalReadError(evidenceRes.error)) throw evidenceRes.error;
+  if (verificationRes.error && !optionalReadError(verificationRes.error)) throw verificationRes.error;
+  if (evidenceRes.error) console.warn("[profileScoring] evidence unavailable for scoring:", evidenceRes.error.message);
+  if (verificationRes.error) console.warn("[profileScoring] verification unavailable for scoring:", verificationRes.error.message);
 
   const data = {
     profile: profileRes.data || {},
@@ -166,8 +192,8 @@ export async function calculateProfileScores(userId) {
     education: educationRes.data || [],
     certifications: certificationsRes.data || [],
     resumes: resumesRes.data || [],
-    evidence: evidenceRes.data || [],
-    verification: verificationRes.data || null,
+    evidence: evidenceRes.error ? [] : (evidenceRes.data || []),
+    verification: verificationRes.error ? null : (verificationRes.data || null),
   };
 
   const completeness = buildCompletenessBreakdown(data);
@@ -202,12 +228,23 @@ export async function updateProfileScores(userId) {
       profile_completeness_score: scores.profile_completeness_score,
       profile_confidence_score: scores.profile_confidence_score,
       trust_score: scores.trust_score,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  if (error) throw error;
+
+  const { error: metadataError } = await supabase
+    .from("profiles")
+    .update({
       last_scored_at: scores.last_scored_at,
       score_breakdown_json: scores.score_breakdown_json,
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId);
 
-  if (error) throw error;
+  if (metadataError && !optionalWriteError(metadataError)) throw metadataError;
+  if (metadataError) console.warn("[profileScoring] score metadata was not written:", metadataError.message);
+
   return scores;
 }
