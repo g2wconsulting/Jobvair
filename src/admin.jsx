@@ -196,11 +196,11 @@ function Dashboard() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("platform_analytics").select("*").single(),
-      supabase.from("admin_candidate_view").select("*").order("account_created_at", { ascending: false }).limit(10),
+      supabase.rpc("get_admin_platform_analytics").single(),
+      supabase.rpc("get_admin_candidates"),
     ]).then(([statsRes, usersRes]) => {
       setStats(statsRes.data);
-      setRecentUsers(usersRes.data || []);
+      setRecentUsers((usersRes.data || []).slice(0, 10));
       setLoading(false);
     });
   }, []);
@@ -303,7 +303,7 @@ function UsersPage() {
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    supabase.from("admin_candidate_view").select("*").order("account_created_at", { ascending: false })
+    supabase.rpc("get_admin_candidates")
       .then(({ data }) => { setUsers(data || []); setLoading(false); });
   }, []);
 
@@ -669,8 +669,11 @@ function SubscriptionsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("admin_candidate_view").select("*").neq("subscription_plan", "free").order("account_created_at", { ascending: false })
-      .then(({ data }) => { setSubs(data || []); setLoading(false); });
+    supabase.rpc("get_admin_candidates")
+      .then(({ data }) => {
+        setSubs((data || []).filter(u => u.subscription_plan !== "free"));
+        setLoading(false);
+      });
   }, []);
 
   const mrr = subs.reduce((acc, u) => acc + (u.subscription_plan === "premium" ? 6 : u.subscription_plan === "premium_plus" ? 12 : 0), 0);
