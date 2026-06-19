@@ -2,7 +2,7 @@
 
 This directory documents the Edge Functions currently expected by the Jobvair frontend.
 
-The function implementations are not present in this repository yet. Export them from the live Supabase project or recreate them from these contracts before treating the backend as version-controlled.
+Most historical function implementations are not present in this repository yet. Export them from the live Supabase project or recreate them from these contracts before treating the backend as version-controlled.
 
 Expected functions:
 
@@ -12,6 +12,7 @@ Expected functions:
 - `create-checkout-session`
 - `create-billing-portal-session`
 - `create-identity-session`
+- `builder-assistant` mock skeleton for Resume Assistant contract testing
 
 Common requirements:
 
