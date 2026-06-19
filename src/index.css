@@ -68,9 +68,11 @@ body {
   box-sizing: border-box;
 }
 
+#root:has(.jobvair-app-shell),
 #root:has(.jobvair-builder-shell) {
   width: 100%;
   max-width: none;
+  margin: 0;
   border-inline: 0;
 }
 

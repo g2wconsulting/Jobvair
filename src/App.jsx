@@ -170,7 +170,7 @@ export default function App() {
   if (!authUser) return <AuthScreen onLogin={handleLogin} />;
 
   return (
-    <div style={{ display:"flex", minHeight:"100vh", background:C.bg, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
+    <div className="jobvair-app-shell" style={{ display:"flex", minHeight:"100vh", background:C.bg, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <Sidebar active={page} onNav={setPage} user={user} collapsed={collapsed} onCollapse={()=>setCollapsed(c=>!c)} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
