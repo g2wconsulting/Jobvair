@@ -20,6 +20,17 @@ Phase 1 does not:
 - `assistantValidation.js`
   - Runtime validation helpers for the request and response shape.
   - Returns structured `valid`, `errors`, and `warnings` results.
+- `builderAssistantClient.js`
+  - Service facade for future Resume Builder integration.
+  - Builds canonical payloads, validates payloads/responses, returns mock
+    suggestions, and creates patch previews.
+- `patchHelpers.js`
+  - Pure patch preview helpers.
+  - Applies assistant patches to cloned payloads only; does not mutate builder
+    state or save data.
+- `diffHelpers.js`
+  - Compares original and preview payloads so the UI can eventually show what
+    would change before a user applies a suggestion.
 
 ## Builder Payload Contract
 
@@ -145,6 +156,20 @@ should preview the patch, let the user explicitly apply or discard it, and then
 persist through the existing Resume Builder save flow.
 
 ## Validation Usage
+
+```js
+import {
+  buildPayload,
+  requestSuggestions,
+  applyPatchPreview,
+} from "./builderAssistantClient.js";
+
+const payload = buildPayload(builderState);
+const response = await requestSuggestions(payload);
+const preview = applyPatchPreview(payload, response);
+```
+
+Lower-level validation helpers are also available:
 
 ```js
 import {
