@@ -1,106 +1,358 @@
-import { C, SEED_ANALYSES } from "../constants/appConstants.js";
-import { Badge, Btn, Card, ProgressBar, SectionTitle } from "../components/ui.jsx";
+import {
+  ArrowRight,
+  Award,
+  BookOpenCheck,
+  BriefcaseBusiness,
+  CalendarCheck2,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  Gauge,
+  GraduationCap,
+  Layers3,
+  Lightbulb,
+  MessageSquareText,
+  PenLine,
+  Rocket,
+  SearchCheck,
+  Send,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Trophy,
+  WandSparkles,
+} from "lucide-react";
+import { Badge, Button, Card, Page, ResponsiveGrid, Section } from "../components/ui/index.js";
+import "./DashboardPage.css";
 
 export default function DashboardPage({ user, onNav }) {
-  const items = [
-    { label:"Basic info", done:true }, { label:"Professional summary", done:true },
-    { label:"Work experience", done:true }, { label:"Skills", done:true },
-    { label:"Education", done:true }, { label:"ID Verification", done:user.idVerified },
-    { label:"Profile photo", done:false }, { label:"Certifications", done:false },
+  const readiness = {
+    overall: 86,
+    resume: 88,
+    ats: 81,
+    interview: 73,
+  };
+
+  const recommendations = [
+    {
+      title: "Improve Resume Summary",
+      detail: "Make the first three lines more specific to your target role and leadership impact.",
+      priority: "High",
+      impact: "+9 quality points",
+      icon: PenLine,
+    },
+    {
+      title: "Add measurable accomplishments",
+      detail: "Six bullets describe responsibilities but do not show scale, savings, revenue, or speed.",
+      priority: "High",
+      impact: "+12 ATS points",
+      icon: TrendingUp,
+    },
+    {
+      title: "Tailor resume for Project Manager",
+      detail: "Create a version that emphasizes delivery, stakeholder management, and roadmap ownership.",
+      priority: "Medium",
+      impact: "+18 match lift",
+      icon: Target,
+    },
+    {
+      title: "Missing AWS keyword",
+      detail: "AWS appears in your profile, but the latest resume version does not reinforce it.",
+      priority: "Medium",
+      impact: "+6 keyword coverage",
+      icon: SearchCheck,
+    },
   ];
-  const pct = Math.round((items.filter(i=>i.done).length/items.length)*100);
+
+  const continueWorking = [
+    { title: "Resume Builder", detail: "Update your targeted resume version", icon: FileText, nav: "builder", action: "Continue" },
+    { title: "Cover Letter", detail: "Draft a tailored cover letter", icon: Send, nav: "cover-letter", action: "Create" },
+    { title: "AI Optimizer", detail: "Analyze a resume against a job target", icon: WandSparkles, nav: "ai-optimize", action: "Optimize" },
+  ];
+
+  const resumeVersions = [
+    { name: "Project Manager - Healthcare", modified: "Today", template: "Modern", score: 88 },
+    { name: "Technical Program Manager", modified: "Yesterday", template: "Executive", score: 82 },
+    { name: "Operations Leader", modified: "Jun 28", template: "Classic", score: 76 },
+  ];
+
+  const jobTargets = [
+    { title: "Project Manager", company: "Northstar Health", match: 92, salary: "$118k - $145k" },
+    { title: "Technical Program Manager", company: "CareBridge Systems", match: 87, salary: "$132k - $164k" },
+    { title: "Implementation Manager", company: "BrightPath Tech", match: 81, salary: "$105k - $132k" },
+  ];
+
+  const tracker = [
+    { label: "Applications", value: 12, icon: ClipboardList },
+    { label: "Interviews", value: 4, icon: CalendarCheck2 },
+    { label: "Offers", value: 1, icon: Trophy },
+  ];
+
+  const trackerTimeline = [
+    { stage: "Applied", company: "Northstar Health", detail: "Project Manager resume sent", status: "complete" },
+    { stage: "Interview", company: "CareBridge Systems", detail: "Prep questions recommended", status: "active" },
+    { stage: "Offer", company: "BrightPath Tech", detail: "Comp range review pending", status: "upcoming" },
+  ];
+
+  const activity = [
+    { title: "Resume version updated", detail: "Project Manager - Healthcare", time: "12 min ago", icon: FileText },
+    { title: "AI recommendation generated", detail: "Add measurable accomplishments", time: "Today", icon: Sparkles },
+    { title: "Job target refreshed", detail: "3 new matching roles found", time: "Today", icon: BriefcaseBusiness },
+    { title: "Profile signal improved", detail: "Skills evidence updated", time: "Yesterday", icon: Layers3 },
+  ];
+
+  const learning = [
+    { label: "Recommended certification", value: "PMP Certification", icon: Award },
+    { label: "Recommended skill", value: "Stakeholder Communication", icon: BookOpenCheck },
+    { label: "Suggested next step", value: "Practice STAR interview stories", icon: GraduationCap },
+  ];
 
   return (
-    <div className="jobvair-page">
-      <div style={{ background:`linear-gradient(135deg, ${C.navy} 0%, ${C.navyMid} 100%)`, borderRadius:16, padding:"28px 32px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16 }}>
-        <div>
-          <p style={{ margin:"0 0 4px", color:"rgba(255,255,255,0.6)", fontSize:14 }}>Good morning 👋</p>
-          <h1 style={{ margin:0, color:"#fff", fontSize:26, fontWeight:800 }}>
-            {user.name}
-            {user.idVerified && <Badge color="teal" small> ✓ Verified</Badge>}
-          </h1>
-          <p style={{ margin:"6px 0 0", color:"rgba(255,255,255,0.6)", fontSize:14 }}>Your profile is {pct}% complete. Keep building to get better AI matches.</p>
+    <Page size="wide" className="jobvair-page dashboard-command-center">
+      <section className="command-hero">
+        <div className="command-hero__content">
+          <Badge tone="info" icon={Sparkles}>AI Career Command Center</Badge>
+          <h1>Good morning, {user.name}</h1>
+          <p>
+            Your career workspace is ready. Continue building a sharper resume, stronger job targets, and a more confident interview story.
+          </p>
+          <div className="command-hero__actions">
+            <Button icon={FileText} onClick={() => onNav("builder")}>Continue Resume</Button>
+            <Button variant="secondary" icon={WandSparkles} onClick={() => onNav("ai-optimize")}>Optimize Resume</Button>
+          </div>
         </div>
-        <Btn onClick={()=>onNav("ai-optimize")} icon="✦">Run AI Analysis</Btn>
-      </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:16, marginBottom:24 }}>
-        {[
-          { label:"Saved Resumes", value:"2", icon:"📄", action:()=>onNav("resumes") },
-          { label:"AI Analyses", value:"2", icon:"✦", action:()=>onNav("history") },
-          { label:"Profile", value:`${pct}%`, icon:"👤", action:()=>onNav("profile") },
-          { label:"ID Status", value:user.idVerified?"Verified":"Unverified", icon:"🛡", action:()=>onNav("profile") },
-          { label:"Plan", value:"Free", icon:"⭐", action:()=>onNav("settings") },
-        ].map(s=>(
-          <Card key={s.label} hover onClick={s.action} style={{ padding:"16px 18px" }}>
-            <div style={{ fontSize:20, marginBottom:8 }}>{s.icon}</div>
-            <div style={{ fontSize:20, fontWeight:800, color:C.navy, marginBottom:2 }}>{s.value}</div>
-            <div style={{ fontSize:12, color:C.textMuted }}>{s.label}</div>
-          </Card>
-        ))}
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))", gap:20 }}>
-        <Card>
-          <SectionTitle action={<Btn variant="ghost" small onClick={()=>onNav("profile")}>Edit →</Btn>}>Profile Completion</SectionTitle>
-          <ProgressBar value={pct} max={100} label="Overall completion" />
-          <div style={{ marginTop:16, display:"flex", flexDirection:"column", gap:8 }}>
-            {items.map(item=>(
-              <div key={item.label} style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:18, height:18, borderRadius:"50%", background:item.done?C.teal:C.border, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                  {item.done && <span style={{ color:"#fff", fontSize:10 }}>✓</span>}
-                </div>
-                <span style={{ fontSize:13, color:item.done?C.text:C.textMuted }}>{item.label}</span>
-              </div>
-            ))}
+        <Card className="career-readiness-hero-card">
+          <div className="readiness-ring" style={{ "--score": `${readiness.overall}%` }}>
+            <div>
+              <span>{readiness.overall}</span>
+              <small>Career Readiness</small>
+            </div>
+          </div>
+          <div className="hero-score-meta">
+            <strong>Premium profile momentum</strong>
+            <span>Strong foundation. Focus next on quantified achievements and interview stories.</span>
           </div>
         </Card>
+      </section>
 
-        <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-          <Card>
-            <SectionTitle action={<Btn variant="ghost" small onClick={()=>onNav("history")}>All →</Btn>}>Recent AI Analyses</SectionTitle>
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {SEED_ANALYSES.map(a=>(
-                <div key={a.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:C.bg, borderRadius:8 }}>
-                  <div>
-                    <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>{a.jobTitle}</div>
-                    <div style={{ fontSize:12, color:C.textMuted }}>{a.company} · {a.date}</div>
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:20, fontWeight:800, color:a.matchScore>=80?C.success:a.matchScore>=60?C.warning:C.danger }}>{a.matchScore}%</div>
-                    <div style={{ fontSize:11, color:C.textMuted }}>match</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {!user.idVerified && (
-            <Card style={{ background:`linear-gradient(135deg,#EEF2FF,#fff)`, border:`1px solid ${C.indigo}33` }}>
-              <div style={{ display:"flex", gap:12 }}>
-                <div style={{ fontSize:28 }}>🛡</div>
+      <Card className="career-readiness-card">
+        <Section
+          title="Career Readiness"
+          description="A mock AI snapshot of how prepared your profile is for your target roles."
+          actions={<Badge tone="success" icon={CheckCircle2}>On track</Badge>}
+        >
+          <div className="readiness-panel">
+            <div className="readiness-panel__primary">
+              <div className="readiness-ring readiness-ring--large" style={{ "--score": `${readiness.overall}%` }}>
                 <div>
-                  <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:4 }}>Verify Your Identity</div>
-                  <div style={{ fontSize:13, color:C.slate, marginBottom:12 }}>Get 3× more profile views and priority in employer search.</div>
-                  <Btn small variant="navy" onClick={()=>onNav("profile")}>Verify Now</Btn>
+                  <span>{readiness.overall}</span>
+                  <small>Overall</small>
                 </div>
               </div>
-            </Card>
-          )}
-
-          <Card style={{ background:`linear-gradient(135deg,${C.tealLight},#fff)`, border:`1px solid ${C.teal}33` }}>
-            <div style={{ display:"flex", gap:12 }}>
-              <div style={{ fontSize:28 }}>⭐</div>
-              <div>
-                <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:4 }}>Upgrade to Premium</div>
-                <div style={{ fontSize:13, color:C.slate, marginBottom:12 }}>Unlimited AI analyses, premium templates, PDF export.</div>
-                <Btn small onClick={()=>onNav("settings")}>View plans</Btn>
-              </div>
+              <p>Your resume, ATS compatibility, and interview readiness are trending upward.</p>
             </div>
+
+            <div className="readiness-breakdown">
+              {[
+                { label: "Resume Quality", value: readiness.resume, icon: FileText },
+                { label: "ATS Compatibility", value: readiness.ats, icon: Gauge },
+                { label: "Interview Readiness", value: readiness.interview, icon: MessageSquareText },
+              ].map((metric) => {
+                const Icon = metric.icon;
+
+                return (
+                  <div className="readiness-row" key={metric.label}>
+                    <div className="readiness-row__label">
+                      <span><Icon size={17} aria-hidden="true" /></span>
+                      <strong>{metric.label}</strong>
+                    </div>
+                    <div className="readiness-row__bar" aria-hidden="true">
+                      <span style={{ width: `${metric.value}%` }} />
+                    </div>
+                    <em>{metric.value}%</em>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Section>
+      </Card>
+
+      <div className="dashboard-two-column">
+        <main className="dashboard-main">
+          <Card>
+            <Section
+              title="AI Recommendations"
+              description="Highest-value moves Jobvair would prioritize next."
+              actions={<Button variant="ghost" size="sm" icon={ArrowRight} iconPosition="right" onClick={() => onNav("ai-optimize")}>See optimizer</Button>}
+            >
+              <div className="recommendation-grid">
+                {recommendations.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <article className="recommendation-card" key={item.title}>
+                      <div className="recommendation-card__top">
+                        <span><Icon size={20} aria-hidden="true" /></span>
+                        <Badge tone={item.priority === "High" ? "warning" : "info"}>{item.priority}</Badge>
+                      </div>
+                      <h3>{item.title}</h3>
+                      <p>{item.detail}</p>
+                      <div className="recommendation-card__footer">
+                        <strong>{item.impact}</strong>
+                        <Button size="sm" variant="secondary" onClick={() => onNav("ai-optimize")}>Act</Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </Section>
           </Card>
-        </div>
+
+          <Section title="Continue Working" description="Fast paths back into the core Jobvair workflow.">
+            <ResponsiveGrid min="240px" gap="18px">
+              {continueWorking.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <Card key={item.title} interactive className="continue-work-card" onClick={() => onNav(item.nav)}>
+                    <span><Icon size={24} aria-hidden="true" /></span>
+                    <h3>{item.title}</h3>
+                    <p>{item.detail}</p>
+                    <em>{item.action}<ArrowRight size={14} aria-hidden="true" /></em>
+                  </Card>
+                );
+              })}
+            </ResponsiveGrid>
+          </Section>
+
+          <ResponsiveGrid min="330px" gap="18px">
+            <Card>
+              <Section
+                title="Resume Versions"
+                actions={<Button variant="ghost" size="sm" onClick={() => onNav("resumes")}>Manage</Button>}
+              >
+                <div className="resume-version-list">
+                  {resumeVersions.map((resume) => (
+                    <div className="resume-version-row" key={resume.name}>
+                      <div>
+                        <strong>{resume.name}</strong>
+                        <small>Modified {resume.modified} · {resume.template} template</small>
+                      </div>
+                      <Button size="sm" variant="secondary" onClick={() => onNav("builder")}>Open</Button>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            </Card>
+
+            <Card>
+              <Section
+                title="Job Targets"
+                actions={<Button variant="ghost" size="sm" onClick={() => onNav("ai-optimize")}>Edit</Button>}
+              >
+                <div className="job-target-list">
+                  {jobTargets.map((job) => (
+                    <div className="job-target-row" key={`${job.company}-${job.title}`}>
+                      <div>
+                        <strong>{job.title}</strong>
+                        <small>{job.company} · {job.salary}</small>
+                      </div>
+                      <span>{job.match}%</span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            </Card>
+          </ResponsiveGrid>
+
+          <Card>
+            <Section
+              title="Application Tracker"
+              description="Mock pipeline snapshot for applications, interviews, and offers."
+              actions={<Badge tone="neutral">Preview data</Badge>}
+            >
+              <div className="tracker-summary">
+                {tracker.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div className="tracker-stat" key={item.label}>
+                      <span><Icon size={19} aria-hidden="true" /></span>
+                      <strong>{item.value}</strong>
+                      <small>{item.label}</small>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pipeline-timeline">
+                {trackerTimeline.map((item) => (
+                  <div className={`pipeline-step pipeline-step--${item.status}`} key={`${item.stage}-${item.company}`}>
+                    <span />
+                    <div>
+                      <strong>{item.stage}</strong>
+                      <small>{item.company}</small>
+                      <p>{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </Card>
+        </main>
+
+        <aside className="dashboard-side">
+          <Card className="learning-card">
+            <Section title="Learning Section" description="Recommended next growth areas.">
+              <div className="learning-list">
+                {learning.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div className="learning-item" key={item.label}>
+                      <span><Icon size={18} aria-hidden="true" /></span>
+                      <div>
+                        <small>{item.label}</small>
+                        <strong>{item.value}</strong>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          </Card>
+
+          <Card>
+            <Section title="Activity Feed">
+              <div className="activity-feed">
+                {activity.map((event) => {
+                  const Icon = event.icon;
+
+                  return (
+                    <div className="activity-item" key={`${event.title}-${event.time}`}>
+                      <span><Icon size={16} aria-hidden="true" /></span>
+                      <div>
+                        <strong>{event.title}</strong>
+                        <p>{event.detail}</p>
+                        <small>{event.time}</small>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          </Card>
+
+          <Card className="next-step-card">
+            <Lightbulb size={24} aria-hidden="true" />
+            <h2>Suggested next step</h2>
+            <p>Open the Resume Builder and strengthen your summary before optimizing against the next job target.</p>
+            <Button full icon={Rocket} onClick={() => onNav("builder")}>Continue Resume</Button>
+          </Card>
+        </aside>
       </div>
-    </div>
+    </Page>
   );
 }
-

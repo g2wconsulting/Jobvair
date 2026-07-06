@@ -28,3 +28,5 @@ __pycache__/
 
 __pycache__/
 *.pyc
+
+tools/codex_bridge/tasks/*.md
