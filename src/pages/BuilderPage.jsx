@@ -3,88 +3,10 @@ import { supabase } from "../supabaseClient";
 import { C, DEFAULT_SECTIONS, EMPTY_USER, FONT_PRESETS, HEADER_LAYOUTS } from "../constants/appConstants.js";
 import { Badge, Btn, Card, CheckGroup, Input, SectionTitle, Select, Toggle } from "../components/ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
-
-function ResumeDocument({ contactFields, sections, tmpl, style = {} }) {
-  const visible = [...sections]
-    .filter(s => s.is_visible && s.section_type !== "name")
-    .sort((a, b) => a.display_order - b.display_order);
-
-  const margins = { tight: "24px 28px", normal: "32px 40px", wide: "40px 56px" }[tmpl.page_margin] || "32px 40px";
-  const sectionGap = { compact: 12, normal: 18, spacious: 26 }[tmpl.section_spacing] || 18;
-  const fontSize = tmpl.base_font_size || 13;
-
-  // Heading style renderer
-  const SectionHeading = ({ label }) => {
-    const base = { margin: `0 0 8px`, fontSize: fontSize - 1, fontWeight: 700, color: tmpl.accent_color, textTransform: "uppercase", letterSpacing: "0.08em" };
-    if (tmpl.heading_style === "underlined") return <h2 style={{ ...base, textTransform:"none", fontSize: fontSize + 1, borderBottom: `2px solid ${tmpl.accent_color}`, paddingBottom: 4 }}>{label}</h2>;
-    if (tmpl.heading_style === "accent_bar") return (
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-        <div style={{ width:4, height:16, background:tmpl.accent_color, borderRadius:2 }} />
-        <h2 style={{ ...base, margin:0 }}>{label}</h2>
-      </div>
-    );
-    if (tmpl.heading_style === "minimal") return <h2 style={{ ...base, color:"#374151", fontWeight:600, letterSpacing:"0.04em" }}>{label}</h2>;
-    return <h2 style={base}>{label}</h2>; // uppercase default
-  };
-
-  // Header styles
-  const renderHeader = () => {
-    const name = contactFields.name || "Your Name";
-    const headline = contactFields.headline || "";
-    const contact = [contactFields.email, contactFields.phone, contactFields.location].filter(Boolean).join(" · ");
-    const links = [contactFields.linkedin, contactFields.github, contactFields.website].filter(Boolean).join(" · ");
-
-    if (tmpl.header_style === "bold_banner") return (
-      <div style={{ background: tmpl.accent_color, color:"#fff", padding:"20px 24px", margin: `-${margins.split(" ")[0]} -${margins.split(" ")[1]} 20px`, borderRadius:"4px 4px 0 0" }}>
-        <div style={{ fontSize: fontSize + 14, fontWeight:800, letterSpacing:"-0.02em" }}>{name}</div>
-        {headline && <div style={{ fontSize: fontSize + 1, opacity:0.9, marginTop:4 }}>{headline}</div>}
-        <div style={{ fontSize: fontSize - 1, opacity:0.8, marginTop:6 }}>{contact}</div>
-        {links && <div style={{ fontSize: fontSize - 2, opacity:0.7, marginTop:3 }}>{links}</div>}
-      </div>
-    );
-
-    if (tmpl.header_style === "centered") return (
-      <div style={{ textAlign:"center", paddingBottom:16, marginBottom:16, borderBottom:`2px solid ${tmpl.accent_color}` }}>
-        <div style={{ fontSize: fontSize + 14, fontWeight:800, color:"#0F172A", letterSpacing:"-0.02em" }}>{name}</div>
-        {headline && <div style={{ fontSize: fontSize + 1, color:tmpl.accent_color, fontWeight:600, marginTop:4 }}>{headline}</div>}
-        <div style={{ fontSize: fontSize - 1, color:"#64748B", marginTop:6 }}>{contact}</div>
-        {links && <div style={{ fontSize: fontSize - 2, color:"#94A3B8", marginTop:3 }}>{links}</div>}
-      </div>
-    );
-
-    // default left / simple
-    return (
-      <div style={{ paddingBottom:14, marginBottom:14, borderBottom:`3px solid ${tmpl.accent_color}` }}>
-        <div style={{ fontSize: fontSize + 13, fontWeight:800, color:"#0F172A", letterSpacing:"-0.02em" }}>{name}</div>
-        {headline && <div style={{ fontSize: fontSize + 1, color:tmpl.accent_color, fontWeight:600, marginTop:3 }}>{headline}</div>}
-        <div style={{ fontSize: fontSize - 1, color:"#64748B", marginTop:5 }}>{contact}</div>
-        {links && <div style={{ fontSize: fontSize - 2, color:"#94A3B8", marginTop:3 }}>{links}</div>}
-      </div>
-    );
-  };
-
-  return (
-    <div style={{
-      background:"#fff", fontFamily: tmpl.font_family || "DM Sans, sans-serif",
-      fontSize: fontSize, color:"#1E293B", lineHeight:1.6,
-      padding: margins, boxShadow:"0 4px 32px rgba(0,0,0,0.12)",
-      width:"100%", minHeight:800, boxSizing:"border-box",
-      ...style,
-    }}>
-      {renderHeader()}
-      {visible.map(s => (
-        <div key={s.section_type || s.id} style={{ marginBottom: sectionGap }}>
-          <SectionHeading label={s.label} />
-          <div style={{ fontSize, color:"#334155", lineHeight:1.65, whiteSpace:"pre-wrap" }}>
-            {s.content?.text || ""}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-
+import { normalizeResumeTemplate } from "../resume-templates/normalizeResumeTemplate.js";
+import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx";
+import { SectionHeadingRenderer } from "../resume-templates/renderers/SectionHeadingRenderer.jsx";
+import { findResumeTemplateBySlug, getPersistableTemplateId, mergeResumeTemplates } from "../resume-templates/templateRegistry.js";
 
 export default function BuilderPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
   const profile = profileForm || EMPTY_USER;
@@ -123,7 +45,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const previewRef = useRef(null);
 
   // ── Derived template values ────────────────────────────────────────────
-  const tmpl = selectedTmpl || { font_family:"DM Sans, sans-serif", accent_color:C.teal, header_style:"left", heading_style:"uppercase", page_margin:"normal", section_spacing:"normal", base_font_size:13 };
+  const tmpl = selectedTmpl || normalizeResumeTemplate({ slug:"modern", name:"Modern", accent_color:C.teal });
   const accent     = tmpl.accent_color || C.teal;
   const fontFamily = customFont || tmpl.font_family || "DM Sans, sans-serif";
   const hdrLayout  = headerLayout || tmpl.header_style || "left";
@@ -235,10 +157,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     if (!user?.id) return;
     supabase.from("resume_templates").select("*").eq("is_active", true).order("sort_order")
       .then(({ data }) => {
-        const ts = data || [];
+        const ts = mergeResumeTemplates(data || []);
         setTemplates(ts);
-        const modern = ts.find(t => t.slug === "modern") || ts[0];
-        if (modern) setSelectedTmpl(modern);
+        const modern = ts.find(t => t.slug === "modern");
+        const defaultTemplate = modern || ((data || []).length ? ts[0] : null);
+        if (defaultTemplate) setSelectedTmpl(defaultTemplate);
       });
 
     supabase.from("resumes").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(1)
@@ -267,7 +190,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           // Load template
           if (existing.selected_template_id) {
             const { data: tmplData } = await supabase.from("resume_templates").select("*").eq("id", existing.selected_template_id).single();
-            if (tmplData) setSelectedTmpl(tmplData);
+            if (tmplData) setSelectedTmpl(normalizeResumeTemplate(tmplData));
+          } else if (existing.template) {
+            const localTemplate = findResumeTemplateBySlug(mergeResumeTemplates([]), existing.template);
+            if (localTemplate) setSelectedTmpl(localTemplate);
           }
         } else {
           setSections(buildDefaultSections());
@@ -359,10 +285,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     try {
       let rid = resumeId;
       const savedHeaderConfig = normalizeHeaderConfig(headerConfig || (!rid ? defaultHeaderConfig() : {}));
+      const persistableTemplateId = getPersistableTemplateId(selectedTmpl);
       if (rid) {
-        await supabase.from("resumes").update({ name:resumeName, updated_at:new Date().toISOString(), selected_template_id:selectedTmpl?.id||null }).eq("id", rid);
+        await supabase.from("resumes").update({ name:resumeName, updated_at:new Date().toISOString(), template:selectedTmpl?.slug||"modern", selected_template_id:persistableTemplateId }).eq("id", rid);
       } else {
-        const { data } = await supabase.from("resumes").insert({ user_id:user.id, name:resumeName, template:selectedTmpl?.slug||"modern", selected_template_id:selectedTmpl?.id||null, is_primary:false, contact_fields:savedHeaderConfig, sections:[] }).select().single();
+        const { data } = await supabase.from("resumes").insert({ user_id:user.id, name:resumeName, template:selectedTmpl?.slug||"modern", selected_template_id:persistableTemplateId, is_primary:false, contact_fields:savedHeaderConfig, sections:[] }).select().single();
         rid = data?.id; setResumeId(rid);
       }
       if (!rid) throw new Error("No resume ID");
@@ -479,94 +406,26 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const hc = normalizeHeaderConfig(headerConfig); // shorthand for header config
 
   // ── Section heading (respects template) ───────────────────────────────
-  const SectionHeading = ({ label }) => {
-    if (tmpl.heading_style === "accent_bar") return (
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-        <div style={{ width:4, height:16, background:accent, borderRadius:2, flexShrink:0 }} />
-        <div style={{ fontSize:fontSize-1, fontWeight:700, color:accent, textTransform:"uppercase", letterSpacing:"0.08em" }}>{label}</div>
-      </div>
-    );
-    if (tmpl.heading_style === "underlined") return (
-      <div style={{ fontSize:fontSize+1, fontWeight:700, color:"#0F172A", borderBottom:`2px solid ${accent}`, paddingBottom:4, marginBottom:8 }}>{label}</div>
-    );
-    if (tmpl.heading_style === "minimal") return (
-      <div style={{ fontSize:fontSize-1, fontWeight:600, color:"#64748B", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>{label}</div>
-    );
-    return <div style={{ fontSize:fontSize-1, fontWeight:700, color:accent, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>{label}</div>;
-  };
-
+  const SectionHeading = ({ label }) => (
+    <SectionHeadingRenderer label={label} tmpl={tmpl} accent={accent} fontSize={fontSize} />
+  );
   // ── Resume header renderer ─────────────────────────────────────────────
   // Reads headerConfig visibility flags; editing=true shows inline inputs
   const setHC = (field, val) => setHeaderConfig(h => ({ ...normalizeHeaderConfig(h), [field]: val }));
-  const isBanner = effectiveHdrLayout === "bold_banner";
-  const textColor = isBanner ? "#fff" : "#0F172A";
-  const subColor  = isBanner ? "rgba(255,255,255,0.85)" : accent;
-  const contactColor = isBanner ? "rgba(255,255,255,0.75)" : "#64748B";
-  const linkColor    = isBanner ? "rgba(255,255,255,0.6)"  : "#94A3B8";
-  const inputStyle = (extra={}) => ({ background:"transparent", border:"none", outline:"none", fontFamily, ...extra });
-  const stopInputClick = e => e.stopPropagation();
-
-  const renderResumeHeader = (editing) => {
-    const nameEl = editing
-      ? <input value={hc.name||""} onClick={stopInputClick} onChange={e=>setHC("name",e.target.value)} placeholder="Your Name" style={inputStyle({ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor, width:"100%", display:"block" })} />
-      : <div style={{ fontSize:fontSize+14, fontWeight:800, letterSpacing:"-0.02em", color:textColor }}>{hc.name||"Your Name"}</div>;
-
-    const headlineEl = (hc.show_headline && (editing || hc.headline)) && (
-      editing
-        ? <input value={hc.headline||""} onClick={stopInputClick} onChange={e=>setHC("headline",e.target.value)} placeholder="Professional Headline (optional)" style={inputStyle({ fontSize:fontSize+1, fontWeight:600, color:subColor, width:"100%", display:"block", marginTop:4 })} />
-        : hc.headline ? <div style={{ fontSize:fontSize+1, fontWeight:600, color:subColor, marginTop:4 }}>{hc.headline}</div> : null
-    );
-
-    // Build contact line — only visible fields
-    const contactItems = [
-      hc.show_email    && hc.email,
-      hc.show_phone    && hc.phone,
-      hc.show_location && hc.location,
-    ].filter(Boolean);
-    const linkItems = [
-      hc.show_linkedin && hc.linkedin,
-      hc.show_website  && hc.website,
-      hc.show_github   && hc.github,
-      hc.show_custom   && hc.custom_contact_line,
-    ].filter(Boolean);
-
-    const contactLineEl = editing ? (
-      <div style={{ display:"flex", gap:10, marginTop:5, flexWrap:"wrap" }}>
-        {hc.show_email    && <input value={hc.email||""}    onClick={stopInputClick} onChange={e=>setHC("email",e.target.value)}    placeholder="email@example.com" style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:140 })} />}
-        {hc.show_phone    && <input value={hc.phone||""}    onClick={stopInputClick} onChange={e=>setHC("phone",e.target.value)}    placeholder="Phone"            style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:110 })} />}
-        {hc.show_location && <input value={hc.location||""} onClick={stopInputClick} onChange={e=>setHC("location",e.target.value)} placeholder="City, State"      style={inputStyle({ fontSize:fontSize-1, color:contactColor, minWidth:110 })} />}
-        {hc.show_linkedin && <input value={hc.linkedin||""} onClick={stopInputClick} onChange={e=>setHC("linkedin",e.target.value)} placeholder="linkedin.com/in/…" style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:140 })} />}
-        {hc.show_website  && <input value={hc.website||""}  onClick={stopInputClick} onChange={e=>setHC("website",e.target.value)}  placeholder="yoursite.com"     style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:120 })} />}
-        {hc.show_github   && <input value={hc.github||""}   onClick={stopInputClick} onChange={e=>setHC("github",e.target.value)}   placeholder="github.com/…"     style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:120 })} />}
-        {hc.show_custom   && <input value={hc.custom_contact_line||""} onClick={stopInputClick} onChange={e=>setHC("custom_contact_line",e.target.value)} placeholder="Custom contact info" style={inputStyle({ fontSize:fontSize-2, color:linkColor, minWidth:140 })} />}
-      </div>
-    ) : (
-      <>
-        {contactItems.length > 0 && <div style={{ fontSize:fontSize-1, color:contactColor, marginTop:5 }}>{contactItems.join(" · ")}</div>}
-        {linkItems.length   > 0 && <div style={{ fontSize:fontSize-2, color:linkColor, marginTop:2 }}>{linkItems.join(" · ")}</div>}
-      </>
-    );
-
-    const align = effectiveHdrLayout === "centered" ? "center" : "left";
-    const inner = <>{nameEl}{headlineEl}{contactLineEl}</>;
-    const [mTop, mSide] = margins.split(" ");
-    const bannerMargin = `-${mTop} -${mSide} 20px`;
-
-    if (effectiveHdrLayout === "bold_banner") return (
-      <div style={{ background:accent, padding:"20px 24px", margin:bannerMargin, borderRadius:"4px 4px 0 0", cursor:editing?"default":"pointer" }}
-        onClick={!editing ? ()=>openToolbarPanel("header") : undefined}>
-        {inner}
-      </div>
-    );
-
-    return (
-      <div style={{ textAlign:align, paddingBottom:14, marginBottom:14, borderBottom:`3px solid ${accent}`, cursor:editing?"default":"pointer" }}
-        onClick={!editing ? ()=>openToolbarPanel("header") : undefined}>
-        {inner}
-      </div>
-    );
-  };
-
+  const renderResumeHeader = (editing) => (
+    <HeaderRenderer
+      contactFields={hc}
+      editing={editing}
+      tmpl={tmpl}
+      effectiveHdrLayout={effectiveHdrLayout}
+      margins={margins}
+      accent={accent}
+      fontFamily={fontFamily}
+      fontSize={fontSize}
+      onFieldChange={setHC}
+      onOpenHeaderPanel={() => openToolbarPanel("header")}
+    />
+  );
   // ── Job block renderer ─────────────────────────────────────────────────
   const JobBlock = ({ job, editing }) => {
     const isActiveJob = activeJobId === job.id && activeSection === "experience";
