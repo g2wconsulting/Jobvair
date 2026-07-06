@@ -37,7 +37,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
   };
 
   return (
-    <div>
+    <div className="jobvair-page">
       <SectionTitle sub="Complete your profile for better AI resume matches and employer visibility." action={
         <div style={{ display:"flex", gap:10, alignItems:"center" }}>
           {saveState === "saved"  && <span style={{ fontSize:13, color:C.success }}>✓ Saved</span>}
@@ -71,10 +71,10 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
 
       {/* ── Basic Info ── */}
       {tab === "basic" && (
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20 }}>
           <Card style={{ gridColumn:"1/-1" }}>
             <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.navy }}>Contact Information</h3>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16 }}>
               <Input label="Full Name" value={form.name} onChange={set("name")} required />
               <Input label="Email" type="email" value={form.email} onChange={set("email")} required />
               <Input label="Phone" value={form.phone} onChange={set("phone")} />
@@ -113,7 +113,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
 
       {/* ── Employment Status ── */}
       {tab === "status" && (
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20 }}>
           <Card>
             <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.navy }}>Employment Status</h3>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -171,7 +171,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
 
           <Card style={{ gridColumn:"1/-1" }}>
               <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.navy }}>Overall Experience</h3>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16 }}>
                 <Input label="Total Years of Professional Experience" value={form.totalYearsExperience || ""} onChange={set("totalYearsExperience")} placeholder="e.g. 12" hint="Total across all roles" />
                 <Input label="Total Years of Leadership Experience" value={form.totalYearsLeadership || ""} onChange={set("totalYearsLeadership")} placeholder="e.g. 5" hint="Managing teams or projects" />
                 <Input label="Total Years of Industry Experience" value={form.totalYearsIndustry || ""} onChange={set("totalYearsIndustry")} placeholder="e.g. 8" hint="In your primary industry" />
@@ -179,7 +179,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
             </Card>
           <Card style={{ gridColumn:"1/-1" }}>
             <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.navy }}>Background & Eligibility</h3>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16 }}>
               <div style={{ padding:"14px 16px", borderRadius:10, border:`1.5px solid ${C.border}`, display:"flex", flexDirection:"column", gap:10 }}>
                 <Toggle checked={form.backgroundCheck} onChange={v=>set("backgroundCheck")(v)} label="Can pass background check" />
                 {form.backgroundCheck && <div style={{ fontSize:12, color:C.success, padding:"6px 10px", background:C.successBg, borderRadius:6 }}>✓ Background clear</div>}
@@ -205,7 +205,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
         <Card>
           <SectionTitle sub="Skills are stored individually and used for employer search and AI matching." action={<Btn small onClick={() => setAddingSkill(!addingSkill)} icon="＋">Add Skill</Btn>}>Skills</SectionTitle>
           {addingSkill && (
-            <div style={{ background:C.bg, borderRadius:10, padding:16, marginBottom:16, display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr auto", gap:12, alignItems:"end" }}>
+            <div style={{ background:C.bg, borderRadius:10, padding:16, marginBottom:16, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, alignItems:"end" }}>
               <Input label="Skill Name" value={newSkill.skill_name || ""} onChange={v => setNewSkill(s => ({...s, skill_name: v}))} placeholder="e.g. Salesforce" />
               <Input label="Years" value={newSkill.years_experience || ""} onChange={v => setNewSkill(s => ({...s, years_experience: v}))} placeholder="3" />
               <Select label="Level" value={newSkill.proficiency_level || "Intermediate"} onChange={v => setNewSkill(s => ({...s, proficiency_level: v}))} options={["Beginner","Intermediate","Advanced","Expert"].map(x => ({value:x, label:x}))} />
@@ -261,7 +261,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
           )}
           {work.map((w, i) => (
             <Card key={w.id || i}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16, marginBottom:16 }}>
                 <Input label="Job Title" value={w.job_title || ""} onChange={v => setWork(ws => ws.map((x, j) => j === i ? {...x, job_title: v} : x))} />
                 <Input label="Company" value={w.company || ""} onChange={v => setWork(ws => ws.map((x, j) => j === i ? {...x, company: v} : x))} />
                 <Input label="Start Date" type="date" value={w.start_date || ""} onChange={v => setWork(ws => ws.map((x, j) => j === i ? {...x, start_date: v} : x))} />
@@ -298,7 +298,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
       {tab === "education" && (
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <Card style={{ background:C.bg }}>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:16 }}>
               <Select label="Highest Education Level" value={form.highestEducationLevel || ""} onChange={set("highestEducationLevel")} options={[
                 { value:"", label:"Select..." },
                 { value:"High School", label:"High School / GED" },
@@ -320,7 +320,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
           )}
           {education.map((e, i) => (
             <Card key={e.id || i}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto", gap:16, alignItems:"end" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:16, alignItems:"end" }}>
                 <Input label="Degree / Program" value={e.degree || ""} onChange={v => setEducation(eds => eds.map((x, j) => j === i ? {...x, degree: v} : x))} />
                 <Input label="Major / Field of Study" value={e.major || ""} onChange={v => setEducation(eds => eds.map((x, j) => j === i ? {...x, major: v} : x))} />
                 <Input label="Institution" value={e.institution || ""} onChange={v => setEducation(eds => eds.map((x, j) => j === i ? {...x, institution: v} : x))} />
@@ -345,7 +345,7 @@ export default function ProfilePage({ user, onUpdateUser, profileForm, setProfil
           )}
           {(profileCerts || []).map((c, i) => (
             <Card key={c.id || i}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr auto", gap:16, alignItems:"end" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:16, alignItems:"end" }}>
                 <Input label="Certification Name" value={c.name || ""} onChange={v => setProfileCerts(cs => cs.map((x, j) => j === i ? {...x, name: v} : x))} placeholder="e.g. AWS Cloud Practitioner" />
                 <Input label="Issuing Organization" value={c.issuing_org || ""} onChange={v => setProfileCerts(cs => cs.map((x, j) => j === i ? {...x, issuing_org: v} : x))} placeholder="e.g. Amazon" />
                 <Input label="Issue Date" type="date" value={c.issue_date || ""} onChange={v => setProfileCerts(cs => cs.map((x, j) => j === i ? {...x, issue_date: v} : x))} />

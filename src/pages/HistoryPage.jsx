@@ -3,7 +3,7 @@ import { Card, SectionTitle } from "../components/ui.jsx";
 
 export default function HistoryPage({ onNav }) {
   return (
-    <div>
+    <div className="jobvair-page">
       <SectionTitle sub="All your past AI resume analyses.">AI Analysis History</SectionTitle>
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         {SEED_ANALYSES.map(a=>(

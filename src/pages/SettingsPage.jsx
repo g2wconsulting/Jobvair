@@ -25,7 +25,7 @@ function SubscriptionTab({ user, plans }) {
 
   return (
     <div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20, marginBottom:24 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:20, marginBottom:24 }}>
         {plans.map(p => (
           <Card key={p.id} style={{ border:p.highlight?`2px solid ${C.teal}`:`1px solid ${C.border}`, position:"relative", display:"flex", flexDirection:"column" }}>
             {p.highlight && (
@@ -121,7 +121,7 @@ function BillingTab({ user }) {
   const isPaid = sub !== "free";
 
   return (
-    <div style={{ maxWidth:560 }}>
+    <div style={{ width:"100%", maxWidth:720 }}>
       <Card>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
           <div>
@@ -187,13 +187,13 @@ export function VerificationTab({ user, onUpdateUser }) {
   const cfg = statusConfig[status] || statusConfig.not_started;
 
   return (
-    <div style={{ maxWidth:520 }}>
+    <div style={{ width:"100%", maxWidth:720 }}>
       {status === "verified" ? (
         <Card style={{ textAlign:"center", padding:"40px 32px" }}>
           <div style={{ width:72, height:72, borderRadius:"50%", background:C.successBg, border:`3px solid ${C.success}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:32 }}>✓</div>
           <h3 style={{ margin:"0 0 8px", fontSize:20, fontWeight:700, color:C.success }}>Identity Verified</h3>
           <p style={{ margin:"0 0 20px", fontSize:14, color:C.textMuted }}>Your profile displays a verified badge. Employers see you as a trusted candidate.</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:10 }}>
             {[["👁","3× more profile views"],["🔝","Priority in search"],["🤝","Trusted by employers"],["🛡","Badge on profile"]].map(([i,t]) => (
               <div key={t} style={{ padding:"10px 12px", background:C.successBg, borderRadius:8, fontSize:13, color:C.success, display:"flex", gap:8 }}>
                 <span>{i}</span>{t}
@@ -222,7 +222,7 @@ export function VerificationTab({ user, onUpdateUser }) {
             <p style={{ margin:0, fontSize:14, color:C.textMuted }}>Boost your visibility and build trust with employers.</p>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:10, marginBottom:20 }}>
             {[["👁","3× more profile views"],["🔝","Priority search results"],["✓","Stand out as verified"],["🤝","Build employer trust"]].map(([i,t]) => (
               <div key={t} style={{ display:"flex", gap:8, padding:"10px 12px", background:C.tealLight, borderRadius:8, fontSize:13, color:C.tealDark, fontWeight:500 }}>
                 <span>{i}</span>{t}
@@ -346,7 +346,7 @@ export default function SettingsPage({ user, onLogout }) {
   };
 
   return (
-    <div>
+    <div className="jobvair-page">
       <SectionTitle>Settings</SectionTitle>
       <Tabs tabs={[
         { id:"account", label:"Account" },{ id:"security", label:"Security" },
@@ -355,7 +355,7 @@ export default function SettingsPage({ user, onLogout }) {
       ]} active={tab} onChange={setTab} />
 
       {tab==="account" && (
-        <div style={{ maxWidth:560 }}>
+        <div style={{ width:"100%", maxWidth:720 }}>
           <Card>
             <div style={{ display:"flex", gap:20, alignItems:"center", marginBottom:24 }}>
               <div style={{ position:"relative" }}>
@@ -387,7 +387,7 @@ export default function SettingsPage({ user, onLogout }) {
       )}
 
       {tab==="security" && (
-        <div style={{ maxWidth:560 }}>
+        <div style={{ width:"100%", maxWidth:720 }}>
           <Card>
             <h3 style={{ margin:"0 0 20px", fontSize:16, fontWeight:700, color:C.navy }}>Change Password</h3>
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
@@ -414,7 +414,7 @@ export default function SettingsPage({ user, onLogout }) {
       )}
 
       {tab==="notifications" && (
-        <div style={{ maxWidth:560 }}>
+        <div style={{ width:"100%", maxWidth:720 }}>
           <Card>
             <h3 style={{ margin:"0 0 20px", fontSize:16, fontWeight:700, color:C.navy }}>Notification Preferences</h3>
             {[

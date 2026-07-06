@@ -11,7 +11,7 @@ export default function DashboardPage({ user, onNav }) {
   const pct = Math.round((items.filter(i=>i.done).length/items.length)*100);
 
   return (
-    <div>
+    <div className="jobvair-page">
       <div style={{ background:`linear-gradient(135deg, ${C.navy} 0%, ${C.navyMid} 100%)`, borderRadius:16, padding:"28px 32px", marginBottom:24, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16 }}>
         <div>
           <p style={{ margin:"0 0 4px", color:"rgba(255,255,255,0.6)", fontSize:14 }}>Good morning 👋</p>
@@ -40,7 +40,7 @@ export default function DashboardPage({ user, onNav }) {
         ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))", gap:20 }}>
         <Card>
           <SectionTitle action={<Btn variant="ghost" small onClick={()=>onNav("profile")}>Edit →</Btn>}>Profile Completion</SectionTitle>
           <ProgressBar value={pct} max={100} label="Overall completion" />

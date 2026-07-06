@@ -48,7 +48,7 @@ export default function ResumesPage({ onNav, user }) {
   }, []);
 
   return (
-    <div>
+    <div className="jobvair-page">
       <SectionTitle sub="Manage your resume versions. Mark one as primary for AI analysis." action={<Btn icon="＋" onClick={() => onNav("builder")}>New Resume</Btn>}>My Resumes</SectionTitle>
 
       {loading ? (

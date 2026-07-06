@@ -68,12 +68,25 @@ body {
   box-sizing: border-box;
 }
 
-#root:has(.jobvair-app-shell),
-#root:has(.jobvair-builder-shell) {
+#root.jobvair-auth-root,
+body.jobvair-authenticated #root {
   width: 100%;
   max-width: none;
   margin: 0;
   border-inline: 0;
+}
+
+.jobvair-page {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .jobvair-app-shell {
+    min-width: 0;
+  }
 }
 
 h1,

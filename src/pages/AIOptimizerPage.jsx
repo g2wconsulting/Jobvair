@@ -99,7 +99,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div>
+      <div className="jobvair-page">
         <SectionTitle sub="Select a resume and a job description to get AI-powered optimization.">AI Resume Optimizer</SectionTitle>
         <Card style={{ textAlign:"center", padding:"60px 24px" }}>
           <div style={{ fontSize:40, marginBottom:20, animation:"pulse 1.5s ease-in-out infinite" }}>✦</div>
@@ -127,7 +127,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
     const scoreLabel = score >= 80 ? "Strong match" : score >= 60 ? "Moderate match" : "Stretch role";
 
     return (
-      <div>
+      <div className="jobvair-page">
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
           <div>
             <h2 style={{ margin:0, fontSize:20, fontWeight:700, color:C.navy }}>Analysis Results</h2>
@@ -140,7 +140,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
         </div>
 
         {/* Score + skill grids */}
-        <div style={{ display:"grid", gridTemplateColumns:"180px 1fr", gap:20, marginBottom:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:20, marginBottom:20 }}>
           <Card style={{ textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
             <div style={{ position:"relative", width:120, height:120, marginBottom:10 }}>
               <svg width="120" height="120" viewBox="0 0 120 120">
@@ -160,7 +160,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
           </Card>
 
           <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
               <Card style={{ background:C.successBg, border:`1px solid ${C.success}33`, padding:"14px 16px" }}>
                 <div style={{ fontSize:12, fontWeight:700, color:C.success, marginBottom:8 }}>✓ Matching Skills</div>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
@@ -187,7 +187,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
           </div>
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:20 }}>
           {/* Rewritten summary */}
           <Card>
             <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:10 }}>✦ Rewritten Professional Summary</div>
@@ -245,10 +245,10 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
 
   // ── Input form ────────────────────────────────────────────────────────────
   return (
-    <div>
+    <div className="jobvair-page">
       <SectionTitle sub="Select a resume and paste a job description to get AI-powered analysis.">AI Resume Optimizer</SectionTitle>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))", gap:20 }}>
         <Card>
           <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.navy }}>1. Select Resume</h3>
           {resumesLoading ? (

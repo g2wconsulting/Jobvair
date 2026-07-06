@@ -82,6 +82,18 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const root = document.getElementById("root");
+    const isAuthenticated = Boolean(authUser);
+    root?.classList.toggle("jobvair-auth-root", isAuthenticated);
+    document.body.classList.toggle("jobvair-authenticated", isAuthenticated);
+
+    return () => {
+      root?.classList.remove("jobvair-auth-root");
+      document.body.classList.remove("jobvair-authenticated");
+    };
+  }, [authUser]);
+
   // When user returns from Stripe Identity, refresh their verification status
   useEffect(() => {
     if (!authUser) return;

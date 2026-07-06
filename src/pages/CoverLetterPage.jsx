@@ -127,12 +127,12 @@ Be specific. Do not use generic filler. Return only the cover letter text.`;
   };
 
   return (
-    <div>
+    <div className="jobvair-page">
       <SectionTitle sub="Generate a tailored AI cover letter in seconds. Customized to the job and your background.">
         AI Cover Letter Generator
       </SectionTitle>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))", gap:20, marginBottom:20 }}>
         <Card>
           <h3 style={{ margin:"0 0 14px", fontSize:16, fontWeight:700, color:C.navy }}>Job Information</h3>
 
