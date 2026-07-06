@@ -1,4 +1,4 @@
-import { createDefaultResumeTemplateConfig } from "../templateDefaults.js";
+﻿import { createDefaultResumeTemplateConfig } from "../templateDefaults.js";
 
 export const LOCAL_RESUME_TEMPLATE_PRESETS = [
   createDefaultResumeTemplateConfig({
@@ -15,10 +15,10 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
     is_featured: true,
     sort_order: 10,
     colors: {
-      accent: "#123047",
+      accent: "#0B1F33",
       text: "#111827",
       muted: "#667085",
-      border: "#D6DEE8",
+      border: "#B8C4D2",
     },
     typography: {
       font_family: "Montserrat, sans-serif",
@@ -30,6 +30,15 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
       page: { margin: "wide", columns: 1, section_spacing: "spacious" },
       header: { style: "centered", contact_separator: "dot", show_headline: true },
       body: { layout_type: "single_column" },
+    },
+    visual_style: {
+      header_treatment: "executive_frame",
+      section_heading_treatment: "executive_rule",
+      divider_color: "#B8C4D2",
+      contact_layout: "stacked",
+      name_size_delta: 17,
+      name_weight: 800,
+      name_letter_spacing: "0.02em",
     },
   }),
   createDefaultResumeTemplateConfig({
@@ -49,7 +58,7 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
       accent: "#2563EB",
       text: "#0F172A",
       muted: "#475569",
-      border: "#DBEAFE",
+      border: "#BFDBFE",
     },
     typography: {
       font_family: "Inter, sans-serif",
@@ -61,6 +70,14 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
       page: { margin: "normal", columns: 1, section_spacing: "normal" },
       header: { style: "left", contact_separator: "dot", show_headline: true },
       body: { layout_type: "single_column" },
+    },
+    visual_style: {
+      header_treatment: "tech_rule",
+      section_heading_treatment: "tech_pill",
+      divider_color: "#BFDBFE",
+      contact_layout: "inline",
+      name_size_delta: 15,
+      name_weight: 850,
     },
   }),
   createDefaultResumeTemplateConfig({
@@ -79,18 +96,27 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
       accent: "#0F766E",
       text: "#102A43",
       muted: "#5B7083",
-      border: "#CCFBF1",
+      border: "#99F6E4",
     },
     typography: {
       font_family: "Lato, sans-serif",
       base_font_size: 13,
-      line_height: 1.64,
+      line_height: 1.68,
       heading_style: "minimal",
     },
     layout: {
-      page: { margin: "normal", columns: 1, section_spacing: "normal" },
+      page: { margin: "normal", columns: 1, section_spacing: "spacious" },
       header: { style: "centered", contact_separator: "dot", show_headline: true },
       body: { layout_type: "single_column" },
+    },
+    visual_style: {
+      header_treatment: "healthcare_calm",
+      section_heading_treatment: "healthcare_subtle",
+      divider_color: "#99F6E4",
+      contact_layout: "stacked",
+      name_size_delta: 14,
+      name_weight: 700,
+      name_letter_spacing: "0",
     },
   }),
   createDefaultResumeTemplateConfig({
@@ -106,7 +132,7 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
     ats_friendly: true,
     sort_order: 40,
     colors: {
-      accent: "#374151",
+      accent: "#111827",
       text: "#111827",
       muted: "#4B5563",
       border: "#D1D5DB",
@@ -114,13 +140,22 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
     typography: {
       font_family: "Arial, sans-serif",
       base_font_size: 12,
-      line_height: 1.55,
+      line_height: 1.52,
       heading_style: "uppercase",
     },
     layout: {
       page: { margin: "wide", columns: 1, section_spacing: "compact" },
       header: { style: "left", contact_separator: "dot", show_headline: true },
       body: { layout_type: "single_column" },
+    },
+    visual_style: {
+      header_treatment: "government_plain",
+      section_heading_treatment: "government_block",
+      divider_color: "#111827",
+      contact_layout: "inline",
+      name_size_delta: 12,
+      name_weight: 800,
+      name_letter_spacing: "0.01em",
     },
   }),
   createDefaultResumeTemplateConfig({
@@ -139,18 +174,28 @@ export const LOCAL_RESUME_TEMPLATE_PRESETS = [
       accent: "#7C3AED",
       text: "#1F2937",
       muted: "#6B7280",
-      border: "#E9D5FF",
+      border: "#DDD6FE",
     },
     typography: {
       font_family: "Nunito, sans-serif",
       base_font_size: 13,
-      line_height: 1.66,
+      line_height: 1.7,
       heading_style: "accent_bar",
     },
     layout: {
       page: { margin: "normal", columns: 1, section_spacing: "spacious" },
       header: { style: "bold_banner", contact_separator: "dot", show_headline: true },
       body: { layout_type: "single_column" },
+    },
+    visual_style: {
+      header_treatment: "student_banner",
+      section_heading_treatment: "student_bar",
+      divider_color: "#DDD6FE",
+      contact_layout: "inline",
+      header_background: "#7C3AED",
+      header_padding: "22px 26px",
+      name_size_delta: 16,
+      name_weight: 900,
     },
   }),
 ];
