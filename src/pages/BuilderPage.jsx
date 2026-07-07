@@ -7,6 +7,7 @@ import { normalizeResumeTemplate } from "../resume-templates/normalizeResumeTemp
 import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx";
 import { SectionHeadingRenderer } from "../resume-templates/renderers/SectionHeadingRenderer.jsx";
 import { findResumeTemplateBySlug, getPersistableTemplateId, mergeResumeTemplates } from "../resume-templates/templateRegistry.js";
+import { VisualDesigner } from "../resume-designer/components/VisualDesigner.jsx";
 
 export default function BuilderPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
   const profile = profileForm || EMPTY_USER;
@@ -15,7 +16,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const edu     = profileEdu    || [];
   const isPaid  = user?.subscription !== "free";
 
-  // â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // State
   const [resumeId,       setResumeId]       = useState(null);
   const [resumeName,     setResumeName]      = useState("My Resume");
   const [sections,       setSections]        = useState(null);
@@ -40,11 +41,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [sectionDropTargetId, setSectionDropTargetId] = useState(null);
   const [jobDropTargetId, setJobDropTargetId] = useState(null);
   const [previewMode,    setPreviewMode]     = useState(false);
+  const [builderMode,    setBuilderMode]     = useState("structured");
   const [panelOpen,      setPanelOpen]       = useState(true);
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
 
-  // â”€â”€ Derived template values â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Derived template values
   const tmpl = selectedTmpl || normalizeResumeTemplate({ slug:"modern", name:"Modern", accent_color:C.teal });
   const accent     = tmpl.accent_color || C.teal;
   const fontFamily = customFont || tmpl.font_family || "DM Sans, sans-serif";
@@ -83,7 +85,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     setPreviewMode(true);
   };
 
-  // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Init
   const emptyHeaderConfig = useCallback(() => ({
     name:               "",
     headline:           "",
@@ -139,7 +141,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     let text = "";
     if (s.section_type === "summary")    text = profile.summary || "";
     if (s.section_type === "skills")     text = skills.map(sk => sk.skill_name).join(", ");
-    if (s.section_type === "education")  text = edu.map(e => `${e.degree || ""} â€” ${e.institution || ""}, ${e.graduation_year || ""}`).join("\n");
+    if (s.section_type === "education")  text = edu.map(e => `${e.degree || ""} - ${e.institution || ""}, ${e.graduation_year || ""}`).join("\n");
     if (s.section_type === "certifications") text = "";
     return { ...s, id: `local_${i}`, resume_id: null, user_id: user?.id, content: { text }, display_order: i };
   }), [profile, skills, edu, user?.id]);
@@ -203,7 +205,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       });
   }, [user?.id]); // eslint-disable-line
 
-  // â”€â”€ Section drag-and-drop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Section drag-and-drop
   const onDragStart = (e, id) => { setDragId(id); setSectionDropTargetId(null); e.dataTransfer.effectAllowed = "move"; };
   const onDragOver  = (e, targetId) => {
     e.preventDefault();
@@ -225,7 +227,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     setSectionDropTargetId(null);
   };
 
-  // â”€â”€ Job drag-and-drop (item level) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Job drag-and-drop
   const onJobDragStart = (e, id) => { setDragJobId(id); setJobDropTargetId(null); e.dataTransfer.effectAllowed = "move"; };
   const onJobDragOver  = (e, targetId) => {
     e.preventDefault();
@@ -271,14 +273,14 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const addCustomSection = () => {
     const newSec = {
       id: `local_custom_${Date.now()}`, resume_id: resumeId, user_id: user?.id,
-      section_type: `custom_${Date.now()}`, label:"Custom Section", icon:"ðŸ“Œ",
+      section_type: `custom_${Date.now()}`, label:"Custom Section", icon:"Custom",
       is_required:false, is_visible:true, content:{ text:"" }, display_order:(sections?.length || 0),
     };
     setSections(ss => [...(ss || []), newSec]);
     selectSection(newSec.id);
   };
 
-  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Save
   const saveResume = async () => {
     if (!user?.id) return;
     setSaveState("saving");
@@ -330,7 +332,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     }
   };
 
-  // â”€â”€ PDF Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // PDF Export
   const exportPDF = async () => {
     if (!previewRef.current) return;
     if (!window.html2pdf) {
@@ -348,7 +350,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     }).from(previewRef.current).save();
   };
 
-  // â”€â”€ File import (parse resume) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // File import
   const processFile = async (file) => {
     if (!file || !file.name.match(/\.(pdf|docx|doc|txt)$/i)) { setParseError("Please upload a PDF, DOCX, or plain text file."); return; }
     setImportedFile(file); setImporting(true); setParseError(null);
@@ -381,7 +383,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       setSections(ss => ss.map(s => {
         if (s.section_type === "summary"        && parsed.summary)                  return { ...s, content:{ text:parsed.summary } };
         if (s.section_type === "skills"         && parsed.skills?.length)           return { ...s, content:{ text:parsed.skills.map(sk => sk.skill_name||sk.name).filter(Boolean).join(", ") } };
-        if (s.section_type === "education"      && parsed.education?.length)        return { ...s, content:{ text:parsed.education.map(e => `${e.degree||""} â€” ${e.institution||""}, ${e.graduation_year||""}`).join("\n") } };
+        if (s.section_type === "education"      && parsed.education?.length)        return { ...s, content:{ text:parsed.education.map(e => `${e.degree||""} - ${e.institution||""}, ${e.graduation_year||""}`).join("\n") } };
         if (s.section_type === "certifications" && parsed.certifications?.length)   return { ...s, content:{ text:Array.isArray(parsed.certifications) ? parsed.certifications.map(c => typeof c==="string"?c:c.name).join("\n") : "" } };
         return s;
       }));
@@ -405,11 +407,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const sortedJobs = [...jobEntries].sort((a, b) => a.display_order - b.display_order);
   const hc = normalizeHeaderConfig(headerConfig); // shorthand for header config
 
-  // â”€â”€ Section heading (respects template) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Section heading
   const SectionHeading = ({ label }) => (
     <SectionHeadingRenderer label={label} tmpl={tmpl} accent={accent} fontSize={fontSize} />
   );
-  // â”€â”€ Resume header renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Resume header renderer
   // Reads headerConfig visibility flags; editing=true shows inline inputs
   const setHC = (field, val) => setHeaderConfig(h => ({ ...normalizeHeaderConfig(h), [field]: val }));
   const renderResumeHeader = (editing) => (
@@ -426,12 +428,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       onOpenHeaderPanel={() => openToolbarPanel("header")}
     />
   );
-  // â”€â”€ Job block renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Job block renderer
   const JobBlock = ({ job, editing }) => {
     const isActiveJob = activeJobId === job.id && activeSection === "experience";
     const isDraggingJob = dragJobId === job.id;
     const isDropTarget = dragJobId && dragJobId !== job.id && jobDropTargetId === job.id;
-    const dateStr = job.start_date ? `${job.start_date} â€“ ${job.is_current ? "Present" : (job.end_date||"")}` : "";
+    const dateStr = job.start_date ? `${job.start_date} - ${job.is_current ? "Present" : (job.end_date||"")}` : "";
     if (!editing) return (
       <div style={{ marginBottom:12 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
@@ -470,7 +472,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           style={{ position:"absolute", left:7, top:"50%", transform:"translateY(-50%)", cursor:isDraggingJob?"grabbing":"grab", width:22, minHeight:44, border:`1px solid ${isDraggingJob||isDropTarget?accent:C.border}`, borderRadius:7, background:isDraggingJob||isDropTarget?`${accent}10`:"#fff", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center" }}
           title="Drag to reorder jobs"
         >
-          <div style={{ color:isDraggingJob||isDropTarget?accent:"#64748B", fontSize:16, lineHeight:1, fontWeight:800 }}>â‹®â‹®</div>
+          <div style={{ color:isDraggingJob||isDropTarget?accent:"#64748B", fontSize:16, lineHeight:1, fontWeight:800 }}>Grip</div>
         </div>
 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:isActiveJob?10:0 }}>
@@ -485,8 +487,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             }
           </div>
           <div style={{ display:"flex", gap:4, flexShrink:0, marginLeft:8 }}>
-            <button onClick={e=>{e.stopPropagation();dupJob(job);}} title="Duplicate job" style={{ background:"#F1F5F9",border:`1px solid ${C.border}`,cursor:"pointer",fontSize:11,color:C.slate,padding:"2px 6px",borderRadius:4 }}>âŽ˜ Dup</button>
-            <button onClick={e=>{e.stopPropagation();deleteJob(job.id);}} title="Delete job" style={{ background:"#FEF2F2",border:`1px solid #FECACA`,cursor:"pointer",fontSize:11,color:C.danger,padding:"2px 6px",borderRadius:4 }}>âœ• Del</button>
+            <button onClick={e=>{e.stopPropagation();dupJob(job);}} title="Duplicate job" style={{ background:"#F1F5F9",border:`1px solid ${C.border}`,cursor:"pointer",fontSize:11,color:C.slate,padding:"2px 6px",borderRadius:4 }}>Duplicate</button>
+            <button onClick={e=>{e.stopPropagation();deleteJob(job.id);}} title="Delete job" style={{ background:"#FEF2F2",border:`1px solid #FECACA`,cursor:"pointer",fontSize:11,color:C.danger,padding:"2px 6px",borderRadius:4 }}>Delete</button>
           </div>
         </div>
         {isActiveJob && (
@@ -499,24 +501,24 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                 <input type="checkbox" checked={job.is_current||false} onChange={e=>updateJob(job.id,"is_current",e.target.checked)} style={{ accentColor:accent }} />Current
               </label>
             </div>
-            <textarea value={job.description||""} onChange={e=>updateJob(job.id,"description",e.target.value)} placeholder="Describe your role, responsibilities, and achievementsâ€¦" rows={4} style={{ width:"100%", padding:"6px 8px", border:`1px solid ${C.border}`, borderRadius:6, fontSize:fontSize-1, fontFamily, outline:"none", resize:"vertical", lineHeight:1.6, boxSizing:"border-box" }} />
+            <textarea value={job.description||""} onChange={e=>updateJob(job.id,"description",e.target.value)} placeholder="Describe your role, responsibilities, and achievements..." rows={4} style={{ width:"100%", padding:"6px 8px", border:`1px solid ${C.border}`, borderRadius:6, fontSize:fontSize-1, fontFamily, outline:"none", resize:"vertical", lineHeight:1.6, boxSizing:"border-box" }} />
           </div>
         )}
         {!isActiveJob && job.description && (
-          <div style={{ fontSize:fontSize-1, color:"#334155", marginTop:4, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{job.description.slice(0,120)}{job.description.length>120?"â€¦":""}</div>
+          <div style={{ fontSize:fontSize-1, color:"#334155", marginTop:4, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{job.description.slice(0,120)}{job.description.length>120?"...":""}</div>
         )}
       </div>
     );
   };
 
-  // â”€â”€ PREVIEW MODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Preview mode
   if (previewMode) return (
     <div>
       <div style={{ position:"sticky", top:0, zIndex:10, background:"#1E293B", padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, borderRadius:10 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:"#94A3B8" }}>Preview â€” {resumeName}</div>
+        <div style={{ fontSize:13, fontWeight:600, color:"#94A3B8" }}>Preview - {resumeName}</div>
         <div style={{ display:"flex", gap:8 }}>
-          <Btn small onClick={exportPDF} variant="secondary">â¬‡ Export PDF</Btn>
-          <Btn small onClick={() => setPreviewMode(false)}>â† Back to Editor</Btn>
+          <Btn small onClick={exportPDF} variant="secondary">Export PDF</Btn>
+          <Btn small onClick={() => setPreviewMode(false)}>Back to Editor</Btn>
         </div>
       </div>
       <div style={{ display:"flex", justifyContent:"center", background:"#E2E8F0", padding:"32px 24px", borderRadius:12, minHeight:800 }}>
@@ -536,10 +538,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     </div>
   );
 
-  // â”€â”€ EDIT MODE â€” 3-panel Canva-style layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Edit mode
   const activeSec = sorted.find(s => (s.id||s.section_type) === activeSection);
 
-  // Right panel â€” context-aware
+  // Right panel - context-aware
   const renderRightPanel = () => {
     if (showHeaderPanel || activeSection === "name") return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
@@ -685,25 +687,45 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           <input value={resumeName} onChange={e=>setResumeName(e.target.value)} style={{ fontSize:15, fontWeight:700, color:C.navy, border:"none", background:"transparent", outline:"none", fontFamily:"inherit", borderBottom:`2px solid ${C.border}`, padding:"2px 0", minWidth:160 }} />
           {saveState==="saved" && <span style={{ fontSize:11, color:C.success, fontWeight:600 }}>Saved</span>}
           {saveState==="error" && <span style={{ fontSize:11, color:C.danger }}>Save failed</span>}
+          <div style={{ display:"flex", gap:4, padding:"3px", background:C.bg, borderRadius:999, border:`1px solid ${C.border}` }}>
+            <button onClick={()=>setBuilderMode("structured")} style={{ border:"none", borderRadius:999, padding:"5px 10px", background:builderMode==="structured"?C.teal:"transparent", color:builderMode==="structured"?"#fff":C.slate, fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>Structured</button>
+            <button onClick={()=>{ setBuilderMode("visual"); closeToolbarPanel(); setInspectorOpen(false); }} style={{ border:"none", borderRadius:999, padding:"5px 10px", background:builderMode==="visual"?C.teal:"transparent", color:builderMode==="visual"?"#fff":C.slate, fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>Visual Designer</button>
+          </div>
         </div>
-        <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-          {[
-            ["Document", showDocumentSettings, !activeSection && !activeToolbarPanel],
-            ["Template", () => openToolbarPanel("templates"), showTemplates],
-            ["Header",   () => selectSection("name", "header"), showHeaderPanel],
-            ["Font",     () => openToolbarPanel("fonts"), showFonts],
-            ["Design",   () => openToolbarPanel("design"), showDesign],
-          ].map(([label, handler, active]) => (
-            <button key={label} onClick={handler} style={{ padding:"6px 12px", borderRadius:7, border:`1px solid ${active?C.teal:C.border}`, background:active?C.tealLight:"transparent", fontSize:12, fontWeight:600, color:active?C.tealDark:C.slate, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s" }}>{label}</button>
-          ))}
-        </div>
-        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <Btn small variant="secondary" onClick={enterPreviewMode}>Preview</Btn>
-          <Btn small variant="secondary" onClick={exportPDF}>PDF</Btn>
-          <Btn small disabled={saveState==="saving"} onClick={saveResume}>{saveState==="saving"?"Saving...":"Save"}</Btn>
-        </div>
+        {builderMode === "structured" ? (
+          <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+            {[
+              ["Document", showDocumentSettings, !activeSection && !activeToolbarPanel],
+              ["Template", () => openToolbarPanel("templates"), showTemplates],
+              ["Header",   () => selectSection("name", "header"), showHeaderPanel],
+              ["Font",     () => openToolbarPanel("fonts"), showFonts],
+              ["Design",   () => openToolbarPanel("design"), showDesign],
+            ].map(([label, handler, active]) => (
+              <button key={label} onClick={handler} style={{ padding:"6px 12px", borderRadius:7, border:`1px solid ${active?C.teal:C.border}`, background:active?C.tealLight:"transparent", fontSize:12, fontWeight:600, color:active?C.tealDark:C.slate, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s" }}>{label}</button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize:12, color:C.textMuted, fontWeight:700 }}>
+            Visual Designer prototype - changes are local only
+          </div>
+        )}
+        {builderMode === "structured" ? (
+          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            <Btn small variant="secondary" onClick={enterPreviewMode}>Preview</Btn>
+            <Btn small variant="secondary" onClick={exportPDF}>PDF</Btn>
+            <Btn small disabled={saveState==="saving"} onClick={saveResume}>{saveState==="saving"?"Saving...":"Save"}</Btn>
+          </div>
+        ) : (
+          <div style={{ display:"flex", gap:6, alignItems:"center", fontSize:11, color:C.textMuted }}>
+            Save/export comes in a later phase
+          </div>
+        )}
       </div>
 
+      {builderMode === "visual" ? (
+        <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} />
+      ) : (
+        <>
       {/* Design panels */}
       {(showTemplates || showFonts || showDesign) && (
         <div style={{ background:C.bgCard, borderBottom:`1px solid ${C.border}`, padding:"14px 20px", flexShrink:0 }}>
@@ -781,7 +803,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           <div style={{ flex:1, padding:8, overflowY:"auto" }}>
             <div onClick={()=>selectSection("name", "header")}
               style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${showHeaderPanel?C.teal:"transparent"}`, background:showHeaderPanel?C.tealLight:"transparent" }}>
-              <span style={{ fontSize:12 }}>ðŸ‘¤</span>
+              <span style={{ fontSize:12 }}>Header</span>
               <span style={{ flex:1, fontSize:11, fontWeight:showHeaderPanel?700:400, color:showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Header / Contact</span>
             </div>
             {sorted.filter(s=>s.section_type!=="name").map(s => {
@@ -792,10 +814,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               return (
                 <div key={sid} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onClick={()=>selectSection(sid)}
                   style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
-                  <span draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" style={{ fontSize:14, color:isSidebarDropTarget||isDraggingSideSection?C.teal:C.textLight, lineHeight:1, width:14, textAlign:"center", cursor:isDraggingSideSection?"grabbing":"grab", fontWeight:800 }}>â‹®â‹®</span>
-                  <span style={{ fontSize:12 }}>{s.icon||"ðŸ“„"}</span>
+                  <span draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" style={{ fontSize:14, color:isSidebarDropTarget||isDraggingSideSection?C.teal:C.textLight, lineHeight:1, width:14, textAlign:"center", cursor:isDraggingSideSection?"grabbing":"grab", fontWeight:800 }}>Grip</span>
+                  <span style={{ fontSize:12 }}>{s.icon||"Section"}</span>
                   <span style={{ flex:1, fontSize:11, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
-                  {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"ðŸ‘":"+"}</button>}
+                  {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"Hide":"+"}</button>}
                 </div>
               );
             })}
@@ -859,7 +881,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                   {(isActive||isHovered) && <div style={{ position:"absolute", top:-10, right:8, background:isActive?accent:"#fff", color:isActive?"#fff":C.slate, border:`1px solid ${isActive?accent:C.border}`, borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", boxShadow:"0 2px 8px rgba(15,23,42,0.08)" }}>Edit</div>}
                   {isDropTarget && <div style={{ position:"absolute", top:-5, left:10, right:10, height:5, background:accent, borderRadius:999, boxShadow:`0 0 0 4px ${accent}22` }} />}
                   <div draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:28, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}10`:"#fff", cursor:isDragging?"grabbing":"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isActive||isHovered?"0 2px 8px rgba(15,23,42,0.08)":"none" }}>
-                    <div style={{ color:isDragging||isDropTarget?accent:"#64748B", fontSize:17, lineHeight:1, fontWeight:800 }}>â‹®â‹®</div>
+                    <div style={{ color:isDragging||isDropTarget?accent:"#64748B", fontSize:17, lineHeight:1, fontWeight:800 }}>Grip</div>
                   </div>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div onClick={()=>selectSection(sid)} style={{ cursor:"pointer", flex:1 }}>
@@ -905,8 +927,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
-// â”€â”€ AI Optimizer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// AI Optimizer
 

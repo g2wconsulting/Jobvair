@@ -21,42 +21,42 @@ export const EMPTY_USER = {
 
 // Still used by HistoryPage and ResumesPage (will be replaced when those pages get real DB reads)
 export const SEED_RESUMES = [
-  { id:"1", name:"My Resume", template:"modern", primary:true, updated:"–", matchScore:null },
+  { id:"1", name:"My Resume", template:"modern", primary:true, updated:"-", matchScore:null },
 ];
 export const SEED_ANALYSES = [];
 
 // ── Salary ranges by level ────────────────────────────────────────────────
 export const SALARY_MAP = {
-  "entry":    { label:"Entry Level",    range:"$45,000 – $70,000" },
-  "mid":      { label:"Mid-Level",      range:"$70,000 – $105,000" },
-  "senior":   { label:"Senior",         range:"$110,000 – $155,000" },
-  "manager":  { label:"Manager",        range:"$120,000 – $165,000" },
-  "director": { label:"Director",       range:"$150,000 – $210,000" },
-  "experienced":{ label:"Experienced",  range:"$95,000 – $135,000" },
+  "entry":    { label:"Entry Level",    range:"$45,000 - $70,000" },
+  "mid":      { label:"Mid-Level",      range:"$70,000 - $105,000" },
+  "senior":   { label:"Senior",         range:"$110,000 - $155,000" },
+  "manager":  { label:"Manager",        range:"$120,000 - $165,000" },
+  "director": { label:"Director",       range:"$150,000 - $210,000" },
+  "experienced":{ label:"Experienced",  range:"$95,000 - $135,000" },
   "custom":   { label:"Custom Target",  range:"" },
 };
 
 
 export const NAV = [
-  { id:"dashboard",    label:"Dashboard",     icon:"⊞" },
-  { id:"profile",      label:"My Profile",    icon:"👤" },
-  { id:"resumes",      label:"Resumes",       icon:"📄" },
-  { id:"builder",      label:"Resume Builder",icon:"✏️" },
-  { id:"ai-optimize",  label:"AI Optimizer",  icon:"✦" },
-  { id:"cover-letter", label:"Cover Letter",  icon:"✉️" },
-  { id:"settings",     label:"Settings",      icon:"⚙️" },
+  { id:"dashboard",    label:"Dashboard",     icon:"[ ]" },
+  { id:"profile",      label:"My Profile",    icon:"User" },
+  { id:"resumes",      label:"Resumes",       icon:"Doc" },
+  { id:"builder",      label:"Resume Builder",icon:"Edit" },
+  { id:"ai-optimize",  label:"AI Optimizer",  icon:"AI" },
+  { id:"cover-letter", label:"Cover Letter",  icon:"Mail" },
+  { id:"settings",     label:"Settings",      icon:"Gear" },
 ];
 
 export const DEFAULT_SECTIONS = [
-  { section_type:"name",           label:"Name & Contact",      icon:"👤", is_required:true,  is_visible:true, display_order:0, content:{} },
-  { section_type:"summary",        label:"Professional Summary", icon:"📝", is_required:false, is_visible:true, display_order:1, content:{text:""} },
-  { section_type:"skills",         label:"Skills",              icon:"⚡", is_required:false, is_visible:true, display_order:2, content:{text:""} },
-  { section_type:"experience",     label:"Work Experience",     icon:"💼", is_required:false, is_visible:true, display_order:3, content:{text:""} },
-  { section_type:"education",      label:"Education",           icon:"🎓", is_required:false, is_visible:true, display_order:4, content:{text:""} },
-  { section_type:"certifications", label:"Certifications",      icon:"🏅", is_required:false, is_visible:true, display_order:5, content:{text:""} },
-  { section_type:"projects",       label:"Projects",            icon:"🚀", is_required:false, is_visible:false, display_order:6, content:{text:""} },
-  { section_type:"awards",         label:"Awards",              icon:"🏆", is_required:false, is_visible:false, display_order:7, content:{text:""} },
-  { section_type:"volunteer",      label:"Volunteer",           icon:"🤝", is_required:false, is_visible:false, display_order:8, content:{text:""} },
+  { section_type:"name",           label:"Name & Contact",      icon:"Header", is_required:true,  is_visible:true, display_order:0, content:{} },
+  { section_type:"summary",        label:"Professional Summary", icon:"Text", is_required:false, is_visible:true, display_order:1, content:{text:""} },
+  { section_type:"skills",         label:"Skills",              icon:"Skill", is_required:false, is_visible:true, display_order:2, content:{text:""} },
+  { section_type:"experience",     label:"Work Experience",     icon:"Work", is_required:false, is_visible:true, display_order:3, content:{text:""} },
+  { section_type:"education",      label:"Education",           icon:"Edu", is_required:false, is_visible:true, display_order:4, content:{text:""} },
+  { section_type:"certifications", label:"Certifications",      icon:"Cert", is_required:false, is_visible:true, display_order:5, content:{text:""} },
+  { section_type:"projects",       label:"Projects",            icon:"Proj", is_required:false, is_visible:false, display_order:6, content:{text:""} },
+  { section_type:"awards",         label:"Awards",              icon:"Award", is_required:false, is_visible:false, display_order:7, content:{text:""} },
+  { section_type:"volunteer",      label:"Volunteer",           icon:"Vol", is_required:false, is_visible:false, display_order:8, content:{text:""} },
 ];
 
 
@@ -75,10 +75,10 @@ export const FONT_PRESETS = [
 ];
 
 export const HEADER_LAYOUTS = [
-  { id:"left",        label:"Left Aligned",  icon:"⬅", tier:"free" },
-  { id:"centered",    label:"Centered",      icon:"↔", tier:"free" },
-  { id:"bold_banner", label:"Bold Banner",   icon:"█", tier:"premium" },
-  { id:"sidebar",     label:"Sidebar",       icon:"▊", tier:"premium" },
+  { id:"left",        label:"Left Aligned",  icon:"Left", tier:"free" },
+  { id:"centered",    label:"Centered",      icon:"Center", tier:"free" },
+  { id:"bold_banner", label:"Bold Banner",   icon:"Band", tier:"premium" },
+  { id:"sidebar",     label:"Sidebar",       icon:"Side", tier:"premium" },
 ];
 
 export const STRIPE_PRICES = {
