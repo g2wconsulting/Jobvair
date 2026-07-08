@@ -14,9 +14,6 @@ export default function ResumeUploadZone({ user, onParsed }) {
   const [done, setDone]         = useState(false);
   const fileRef                 = useRef(null);
 
-  const SUPABASE_URL_CLIENT = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY   = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
   const accept = ".pdf,.doc,.docx,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
   const processFile = async (f) => {

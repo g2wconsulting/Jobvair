@@ -3,17 +3,8 @@ import { supabase } from "../supabaseClient";
 import { C } from "../constants/appConstants.js";
 import { Btn, Input } from "../components/ui.jsx";
 
-export default function AuthScreen({ onLogin }) {
-  const [mode, setMode] = useState("login");
-  const [step, setStep] = useState(1); // 1=form, 2=email verify, 3=id-verify, 4=done
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [verifyStatus, setVerifyStatus] = useState(null); // null | "scanning" | "done"
-
-  const Logo = () => (
+function Logo() {
+  return (
     <div style={{ textAlign:"center", marginBottom:32 }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, marginBottom:6 }}>
         <div style={{ width:40, height:40, borderRadius:10, background:C.teal, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -27,14 +18,27 @@ export default function AuthScreen({ onLogin }) {
       <p style={{ color:"rgba(255,255,255,0.55)", fontSize:13, margin:0 }}>AI-Powered Career Platform</p>
     </div>
   );
+}
 
-  const StepDots = ({ total, current }) => (
+function StepDots({ total, current }) {
+  return (
     <div style={{ display:"flex", justifyContent:"center", gap:8, marginBottom:24 }}>
       {Array.from({length:total}).map((_,i)=>(
         <div key={i} style={{ width:i+1===current?24:8, height:8, borderRadius:99, background:i+1<=current?C.teal:C.border, transition:"all 0.2s" }} />
       ))}
     </div>
   );
+}
+
+export default function AuthScreen({ onLogin }) {
+  const [mode, setMode] = useState("login");
+  const [step, setStep] = useState(1); // 1=form, 2=email verify, 3=id-verify, 4=done
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [verifyStatus, setVerifyStatus] = useState(null); // null | "scanning" | "done"
 
   const submitSignup = async () => {
     if (!email || !password || !name) { setMsg("Please fill in all fields."); return; }

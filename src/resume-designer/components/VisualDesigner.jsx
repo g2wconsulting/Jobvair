@@ -272,6 +272,7 @@ export function VisualDesigner({ headerConfig, sections, jobEntries }) {
   const [fitZoom, setFitZoom] = useState(0.72);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the prototype's local design state whenever the structured builder's data changes upstream
     setDesign(createDefaultDesign({ header: headerConfig, sections: sections || [], jobs: jobEntries || [] }));
     setSelectedBlockId("profile_name_1");
   }, [headerConfig, sections, jobEntries]);

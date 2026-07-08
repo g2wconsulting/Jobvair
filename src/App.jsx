@@ -13,10 +13,28 @@ import AIOptimizerPage from "./pages/AIOptimizerPage.jsx";
 import CoverLetterPage from "./pages/CoverLetterPage.jsx";
 import HistoryPage from "./pages/HistoryPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
+const VALID_PAGES = ["dashboard", "profile", "resumes", "builder", "ai-optimize", "cover-letter", "history", "settings"];
+
+const getInitialPage = () => {
+  if (typeof window === "undefined") return "dashboard";
+  const fromUrl = new URLSearchParams(window.location.search).get("page");
+  return VALID_PAGES.includes(fromUrl) ? fromUrl : "dashboard";
+};
+
 export default function App() {
   const [authUser, setAuthUser]   = useState(undefined); // undefined = loading, null = logged out
-  const [page, setPage]           = useState("dashboard");
+  const [page, setPage]           = useState(getInitialPage);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Keep the URL's ?page= param in sync so refreshing the browser keeps the user
+  // on the page they were viewing instead of resetting to the dashboard.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("page") === page) return;
+    params.set("page", page);
+    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+  }, [page]);
 
   // All profile state lives in the useProfile hook — persisted to Supabase
   const {
@@ -99,13 +117,14 @@ export default function App() {
     if (!authUser) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("tab") === "verification") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing to an external redirect query param, not derivable state
       setPage("profile");
       // Delay to allow Stripe webhook to process, then reload status
       setTimeout(() => loadUserStatus(authUser.id), 3000);
       // Clean the URL without reloading the page
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [authUser]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authUser]);
 
   // ── Derive a flat user object the rest of the UI expects ──────────────────
   const user = authUser ? {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { C, EMPTY_USER } from "../constants/appConstants.js";
-import { Badge, Btn, Card, Input, ProgressBar, SectionTitle } from "../components/ui.jsx";
+import { Badge, Btn, Card, Input, SectionTitle } from "../components/ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
 
 export default function AIOptimizerPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
@@ -108,7 +108,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
             Comparing your profile and resume against the job requirements. This usually takes 10–20 seconds.
           </div>
           <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
-            {["Matching skills","Identifying gaps","Rewriting content","Scoring fit"].map((step, i) => (
+            {["Matching skills","Identifying gaps","Rewriting content","Scoring fit"].map((step) => (
               <div key={step} style={{ fontSize:12, color:C.textMuted, padding:"4px 10px", background:C.bg, borderRadius:20, border:`1px solid ${C.border}` }}>
                 {step}
               </div>

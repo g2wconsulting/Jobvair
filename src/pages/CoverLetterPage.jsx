@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { C, EMPTY_USER } from "../constants/appConstants.js";
-import { Btn, Card, Input, SectionTitle, Select } from "../components/ui.jsx";
+import { Btn, Card, Input, SectionTitle } from "../components/ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
 
-export default function CoverLetterPage({ profileForm, profileSkills, profileWork, user }) {
+export default function CoverLetterPage({ profileForm, profileSkills, profileWork }) {
   const profile = profileForm || EMPTY_USER;
   const skills  = profileSkills || [];
   const work    = profileWork   || [];

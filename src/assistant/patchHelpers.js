@@ -91,9 +91,12 @@ const findCollectionIndex = (collection, patchItem, fallbackKey) => {
   return collection.findIndex(item => item?.id === id || item?.[fallbackKey] === id);
 };
 
+const PATCH_METADATA_KEYS = ["metadata", "operation", "section_id", "job_id"];
+
 const stripPatchMetadata = item => {
   if (!isPlainObject(item)) return item;
-  const { metadata, operation, section_id, job_id, ...value } = item;
+  const value = { ...item };
+  PATCH_METADATA_KEYS.forEach(key => delete value[key]);
   return value;
 };
 

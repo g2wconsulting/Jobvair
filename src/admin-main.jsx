@@ -8,7 +8,7 @@
  * Access: /admin — only visible to users in the admin_users table.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 
 // ── Design tokens ─────────────────────────────────────────────────────────
@@ -455,7 +455,7 @@ function TemplatesPage({ adminUser }) {
   const save = async () => {
     if (!editing || editing === "new") return;
     setSaving(true);
-    const { id, created_at, created_by, ...rest } = editing;
+    const { id, ...rest } = editing;
     if (id) {
       const { data } = await supabase.from("resume_templates").update({ ...rest, updated_at: new Date().toISOString() }).eq("id", id).select().single();
       setTemplates(ts => ts.map(t => t.id === id ? data : t));

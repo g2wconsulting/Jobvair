@@ -1,7 +1,7 @@
-﻿import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { C, DEFAULT_SECTIONS, EMPTY_USER, FONT_PRESETS, HEADER_LAYOUTS } from "../constants/appConstants.js";
-import { Badge, Btn, Card, CheckGroup, Input, SectionTitle, Select, Toggle } from "../components/ui.jsx";
+import { Btn } from "../components/ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
 import { normalizeResumeTemplate } from "../resume-templates/normalizeResumeTemplate.js";
 import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx";
@@ -11,9 +11,9 @@ import { VisualDesigner } from "../resume-designer/components/VisualDesigner.jsx
 
 export default function BuilderPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
   const profile = profileForm || EMPTY_USER;
-  const skills  = profileSkills || [];
-  const work    = profileWork   || [];
-  const edu     = profileEdu    || [];
+  const skills  = useMemo(() => profileSkills || [], [profileSkills]);
+  const work    = useMemo(() => profileWork   || [], [profileWork]);
+  const edu     = useMemo(() => profileEdu    || [], [profileEdu]);
   const isPaid  = user?.subscription !== "free";
 
   // State
@@ -42,7 +42,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [jobDropTargetId, setJobDropTargetId] = useState(null);
   const [previewMode,    setPreviewMode]     = useState(false);
   const [builderMode,    setBuilderMode]     = useState("structured");
-  const [panelOpen,      setPanelOpen]       = useState(true);
+  const [measuredHeights, setMeasuredHeights] = useState({});
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
   const structuredHeaderRef = useRef(null);
@@ -140,8 +140,6 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       show_custom: cfg.show_custom ?? base.show_custom,
     };
   }, [emptyHeaderConfig]);
-
-  const contactFields = normalizeHeaderConfig(headerConfig);
 
   const buildDefaultSections = useCallback(() => DEFAULT_SECTIONS.map((s, i) => {
     let text = "";
@@ -349,10 +347,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       });
     }
     window.html2pdf().set({
-      margin:[10,10,10,10], filename:`${resumeName.replace(/\s+/g,"_")}.pdf`,
+      margin:0, filename:`${resumeName.replace(/\s+/g,"_")}.pdf`,
       image:{ type:"jpeg", quality:0.98 },
       html2canvas:{ scale:2, useCORS:true, letterRendering:true },
-      jsPDF:{ unit:"mm", format:"a4", orientation:"portrait" },
+      jsPDF:{ unit:"in", format:"letter", orientation:"portrait" },
+      pagebreak:{ mode:["css","legacy"], after:".jobvair-pdf-page" },
     }).from(previewRef.current).save();
   };
 
@@ -457,11 +456,15 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     if (item.type === "experienceHeader") return 50;
     if (item.type === "experienceAdd") return 48;
     if (item.type === "job") {
+      const measured = measuredHeights[item.key];
+      if (measured) return measured;
       const job = visibleJobs.find(candidate => candidate.id === item.jobId);
       const descriptionHeight = estimateTextHeight(job?.description || "", 86, fontSize - 1);
       return Math.max(92, 74 + descriptionHeight);
     }
 
+    const measured = measuredHeights[item.key];
+    if (measured) return measured;
     const section = visibleStructuredSections.find(candidate => getSectionId(candidate) === item.sectionId);
     const textHeight = estimateTextHeight(section?.content?.text || "", 92, fontSize);
     return Math.max(84, 54 + textHeight + sGap);
@@ -469,7 +472,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const paginateStructuredItems = () => {
     if (!structuredItemKeys.length) return [[]];
     const pages = [[]];
-    let currentHeight = 150;
+    let currentHeight = measuredHeights.__header ?? 150;
 
     structuredItems.forEach(item => {
       const itemHeight = estimateStructuredItemHeight(item);
@@ -489,6 +492,35 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   };
   const structuredPageGroups = paginateStructuredItems();
   const hc = normalizeHeaderConfig(headerConfig); // shorthand for header config
+
+  // Measure real rendered heights of header/section/job blocks after every render.
+  // Pagination above starts from a character-count estimate so the first paint has
+  // something to show, then this effect corrects it to the actual DOM height, which
+  // triggers one more render with accurate page breaks. This is what keeps content
+  // from overflowing past the bottom of a page when real font metrics, wrapping, or
+  // bullet lengths differ from the estimate.
+  useLayoutEffect(() => {
+    const next = {};
+    if (structuredHeaderRef.current) {
+      next.__header = Math.ceil(structuredHeaderRef.current.getBoundingClientRect().height) + sGap;
+    }
+    structuredItems.forEach(item => {
+      if (item.type === "experienceHeader" || item.type === "experienceAdd") return;
+      const node = structuredSectionRefs.current[item.key];
+      if (node) {
+        next[item.key] = Math.ceil(node.getBoundingClientRect().height);
+      }
+    });
+
+    setMeasuredHeights(prev => {
+      const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+      let changed = false;
+      for (const key of keys) {
+        if (Math.abs((prev[key] || 0) - (next[key] || 0)) > 1) { changed = true; break; }
+      }
+      return changed ? next : prev;
+    });
+  }, [structuredItems, sGap]);
 
   // Section heading
   const SectionHeading = ({ label }) => (
@@ -610,7 +642,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
     return (
       <div key={sectionRefKey}
-        ref={node => { if(node) structuredSectionRefs.current[sectionRefKey] = node; }}
+        ref={node => { if(node) structuredSectionRefs.current[sectionRefKey] = node; else delete structuredSectionRefs.current[sectionRefKey]; }}
         onDragOver={e=>onDragOver(e,sid)}
         onDrop={e=>onDrop(e,sid)}
         onClick={()=>selectSection(sid)}
@@ -634,11 +666,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         {isExperience ? (
           <div>
             {(jobsForPage || visibleJobs).map(job => (
-              <div key={job.id} ref={node => { if(node) structuredSectionRefs.current[`job:${job.id}`] = node; }}>
+              <div key={job.id} ref={node => { if(node) structuredSectionRefs.current[`job:${job.id}`] = node; else delete structuredSectionRefs.current[`job:${job.id}`]; }}>
                 <JobBlock job={job} editing={true} />
               </div>
             ))}
-            {showAddJob && <div ref={node => { if(node) structuredSectionRefs.current[`experience:${sid}:add`] = node; }}>
+            {showAddJob && <div ref={node => { if(node) structuredSectionRefs.current[`experience:${sid}:add`] = node; else delete structuredSectionRefs.current[`experience:${sid}:add`]; }}>
               <button onClick={addJob} style={{ background:"none", border:`1.5px dashed ${C.border}`, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:11, color:C.textMuted, fontFamily:"inherit", marginTop:4, width:"100%" }}>+ Add Job</button>
             </div>}
           </div>
@@ -993,7 +1025,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           </div>
           <div ref={previewRef} style={{ width:structuredPageWidth, maxWidth:"100%", flexShrink:1, display:"flex", flexDirection:"column", gap:28, fontFamily, fontSize, color:"#1E293B", lineHeight:1.6, overflowWrap:"break-word", wordBreak:"break-word" }}>
             {structuredPageGroups.map((pageSectionIds, pageIndex) => (
-              <div key={pageIndex} style={{ position:"relative", width:"100%", minHeight:structuredPageHeight, overflow:"visible", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", padding:margins, boxSizing:"border-box" }}>
+              <div key={pageIndex} className={pageIndex < structuredPageGroups.length - 1 ? "jobvair-pdf-page" : undefined} style={{ position:"relative", width:"100%", minHeight:structuredPageHeight, overflow:"visible", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", padding:margins, boxSizing:"border-box" }}>
                 <div style={{ position:"absolute", bottom:14, right:18, fontSize:10, color:"#CBD5E1", fontWeight:700, letterSpacing:"0.08em" }}>Page {pageIndex + 1}</div>
                 {pageIndex === 0 && (
                   <div

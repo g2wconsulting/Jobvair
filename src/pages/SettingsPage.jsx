@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { C, STRIPE_PRICES } from "../constants/appConstants.js";
-import { Avatar, Badge, Btn, Card, CheckGroup, Input, SectionTitle, Select, Tabs, Toggle } from "../components/ui.jsx";
+import { Avatar, Badge, Btn, Card, Input, SectionTitle, Tabs } from "../components/ui.jsx";
 import { edgeFetch } from "../lib/edgeFetch.js";
 
 function SubscriptionTab({ user, plans }) {
@@ -16,7 +16,7 @@ function SubscriptionTab({ user, plans }) {
         user_id:    user.id,
         user_email: user.email,
       });
-      window.location.href = data.url;
+      window.location.assign(data.url);
     } catch (err) {
       setCheckoutError(err.message || "Could not start checkout. Please try again.");
       setCheckoutLoading(null);
@@ -111,7 +111,7 @@ function BillingTab({ user }) {
       const data = await edgeFetch("create-billing-portal-session", {
         user_id: user.id, user_email: user.email,
       });
-      window.location.href = data.url;
+      window.location.assign(data.url);
     } catch {
       setLoading(false);
     }
@@ -151,7 +151,7 @@ function BillingTab({ user }) {
   );
 }
 
-export function VerificationTab({ user, onUpdateUser }) {
+export function VerificationTab({ user }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
 
@@ -170,7 +170,7 @@ export function VerificationTab({ user, onUpdateUser }) {
         user_email: user.email,
         return_url: returnUrl,
       });
-      window.location.href = data.url;
+      window.location.assign(data.url);
     } catch (err) {
       setError(err.message || "Could not start verification. Please try again.");
       setLoading(false);
@@ -328,22 +328,6 @@ export default function SettingsPage({ user, onLogout }) {
       cta: "Upgrade to Career+",
     },
   ];
-
-  const addon = {
-    name:"2nd Look — Recruiter Review",
-    price:"$25",
-    period:"one-time",
-    icon:"👤",
-    color: C.purple,
-    colorBg: C.purpleBg,
-    features:[
-      "Real recruiter reviews your resume",
-      "Written feedback within 48 hours",
-      "Tailored to your target role & industry",
-      "One round of follow-up questions",
-    ],
-    cta:"Request a 2nd Look",
-  };
 
   return (
     <div className="jobvair-page">

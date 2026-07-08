@@ -1,7 +1,7 @@
 import { C, SEED_ANALYSES } from "../constants/appConstants.js";
 import { Card, SectionTitle } from "../components/ui.jsx";
 
-export default function HistoryPage({ onNav }) {
+export default function HistoryPage() {
   return (
     <div className="jobvair-page">
       <SectionTitle sub="All your past AI resume analyses.">AI Analysis History</SectionTitle>
