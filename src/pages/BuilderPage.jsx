@@ -45,6 +45,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [panelOpen,      setPanelOpen]       = useState(true);
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
+  const structuredHeaderRef = useRef(null);
+  const structuredSectionRefs = useRef({});
 
   // Derived template values
   const tmpl = selectedTmpl || normalizeResumeTemplate({ slug:"modern", name:"Modern", accent_color:C.teal });
@@ -56,6 +58,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const fontSize   = tmpl.base_font_size || 13;
   const sGap       = { compact:10, normal:18, spacious:28 }[tmpl.section_spacing] || 18;
   const margins    = tmpl.page_margin === "tight" ? "32px 40px" : tmpl.page_margin === "wide" ? "52px 72px" : "44px 56px";
+  const structuredPageWidth = 980;
+  const structuredPageHeight = Math.round(structuredPageWidth * 11 / 8.5);
+  const structuredMarginY = Number.parseInt(margins, 10) || 44;
+  const structuredContentHeight = structuredPageHeight - structuredMarginY * 2;
   const showHeaderPanel = activeToolbarPanel === "header";
   const showTemplates = activeToolbarPanel === "templates";
   const showFonts = activeToolbarPanel === "fonts";
@@ -405,6 +411,83 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
   const sorted = sections ? [...sections].sort((a, b) => a.display_order - b.display_order) : [];
   const sortedJobs = [...jobEntries].sort((a, b) => a.display_order - b.display_order);
+  const getSectionId = section => section.id || section.section_type;
+  const visibleStructuredSections = sorted.filter(section => section.is_visible && section.section_type !== "name");
+  const visibleJobs = sortedJobs.filter(job => job.is_visible !== false);
+  const experienceSection = visibleStructuredSections.find(section => section.section_type === "experience");
+  const experienceSectionId = experienceSection ? getSectionId(experienceSection) : null;
+  const structuredItems = visibleStructuredSections.flatMap(section => {
+    const sectionId = getSectionId(section);
+    if (section.section_type !== "experience" || !visibleJobs.length) {
+      return [{ key: `section:${sectionId}`, type:"section", sectionId }];
+    }
+
+    return [
+      { key: `experience:${sectionId}:header`, type:"experienceHeader", sectionId },
+      ...visibleJobs.map(job => ({ key: `job:${job.id}`, type:"job", sectionId, jobId:job.id })),
+      { key: `experience:${sectionId}:add`, type:"experienceAdd", sectionId },
+    ];
+  });
+
+  const DragHandleDots = ({ color = "#64748B", dotSize = 3 }) => (
+    <span
+      aria-hidden="true"
+      style={{
+        display:"flex",
+        flexDirection:"column",
+        gap:3,
+        alignItems:"center",
+        justifyContent:"center",
+      }}
+    >
+      {Array.from({ length:3 }).map((_, index) => (
+        <span key={index} style={{ width:dotSize, height:dotSize, borderRadius:999, background:color, display:"block" }} />
+      ))}
+    </span>
+  );
+  const structuredItemKeys = structuredItems.map(item => item.key);
+  const structuredItemMap = Object.fromEntries(structuredItems.map(item => [item.key, item]));
+  const estimateTextHeight = (text, widthChars = 90, size = fontSize) => {
+    const lineCount = String(text || "").split("\n").reduce((total, line) => {
+      return total + Math.max(1, Math.ceil(line.length / widthChars));
+    }, 0);
+    return Math.ceil(lineCount * size * 1.65);
+  };
+  const estimateStructuredItemHeight = item => {
+    if (item.type === "experienceHeader") return 50;
+    if (item.type === "experienceAdd") return 48;
+    if (item.type === "job") {
+      const job = visibleJobs.find(candidate => candidate.id === item.jobId);
+      const descriptionHeight = estimateTextHeight(job?.description || "", 86, fontSize - 1);
+      return Math.max(92, 74 + descriptionHeight);
+    }
+
+    const section = visibleStructuredSections.find(candidate => getSectionId(candidate) === item.sectionId);
+    const textHeight = estimateTextHeight(section?.content?.text || "", 92, fontSize);
+    return Math.max(84, 54 + textHeight + sGap);
+  };
+  const paginateStructuredItems = () => {
+    if (!structuredItemKeys.length) return [[]];
+    const pages = [[]];
+    let currentHeight = 150;
+
+    structuredItems.forEach(item => {
+      const itemHeight = estimateStructuredItemHeight(item);
+      const currentPage = pages[pages.length - 1];
+      const shouldStartNextPage = currentPage.length > 0 && currentHeight + itemHeight > structuredContentHeight;
+
+      if (shouldStartNextPage) {
+        pages.push([item.key]);
+        currentHeight = itemHeight;
+      } else {
+        currentPage.push(item.key);
+        currentHeight += itemHeight;
+      }
+    });
+
+    return pages;
+  };
+  const structuredPageGroups = paginateStructuredItems();
   const hc = normalizeHeaderConfig(headerConfig); // shorthand for header config
 
   // Section heading
@@ -436,12 +519,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     const dateStr = job.start_date ? `${job.start_date} - ${job.is_current ? "Present" : (job.end_date||"")}` : "";
     if (!editing) return (
       <div style={{ marginBottom:12 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline" }}>
-          <div style={{ fontWeight:700, fontSize:fontSize, color:"#0F172A" }}>{job.job_title || "Job Title"}</div>
-          <div style={{ fontSize:fontSize-2, color:"#64748B" }}>{dateStr}</div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:12, flexWrap:"wrap" }}>
+          <div style={{ fontWeight:700, fontSize:fontSize, color:"#0F172A", minWidth:0, overflowWrap:"break-word" }}>{job.job_title || "Job Title"}</div>
+          <div style={{ fontSize:fontSize-2, color:"#64748B", flexShrink:0 }}>{dateStr}</div>
         </div>
-        <div style={{ fontSize:fontSize-1, color:accent, fontWeight:600 }}>{job.company}{job.location ? ` Â· ${job.location}` : ""}</div>
-        {job.description && <div style={{ fontSize:fontSize-1, color:"#334155", marginTop:4, whiteSpace:"pre-wrap", lineHeight:1.6 }}>{job.description}</div>}
+        <div style={{ fontSize:fontSize-1, color:accent, fontWeight:600, overflowWrap:"break-word" }}>{job.company}{job.location ? ` | ${job.location}` : ""}</div>
+        {job.description && <div style={{ fontSize:fontSize-1, color:"#334155", marginTop:4, whiteSpace:"pre-wrap", lineHeight:1.6, overflowWrap:"break-word" }}>{job.description}</div>}
       </div>
     );
     return (
@@ -472,28 +555,28 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           style={{ position:"absolute", left:7, top:"50%", transform:"translateY(-50%)", cursor:isDraggingJob?"grabbing":"grab", width:22, minHeight:44, border:`1px solid ${isDraggingJob||isDropTarget?accent:C.border}`, borderRadius:7, background:isDraggingJob||isDropTarget?`${accent}10`:"#fff", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center" }}
           title="Drag to reorder jobs"
         >
-          <div style={{ color:isDraggingJob||isDropTarget?accent:"#64748B", fontSize:16, lineHeight:1, fontWeight:800 }}>Grip</div>
+          <DragHandleDots color={isDraggingJob||isDropTarget?accent:"#64748B"} />
         </div>
 
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:isActiveJob?10:0 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:isActiveJob?10:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flex:1, minWidth:0 }}>
             {isActiveJob
               ? <input value={job.job_title||""} onChange={e=>updateJob(job.id,"job_title",e.target.value)} placeholder="Job Title" style={{ fontWeight:700, fontSize:fontSize, border:"none", outline:"none", fontFamily, background:"transparent", color:"#0F172A", flex:1, minWidth:0 }} />
               : <div style={{ fontWeight:700, fontSize:fontSize, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{job.job_title||"(no title)"}</div>
             }
             {isActiveJob
-              ? <input value={job.company||""} onChange={e=>updateJob(job.id,"company",e.target.value)} placeholder="Company" style={{ fontSize:fontSize-1, color:accent, fontWeight:600, border:"none", outline:"none", fontFamily, background:"transparent", width:130 }} />
+              ? <input value={job.company||""} onChange={e=>updateJob(job.id,"company",e.target.value)} placeholder="Company" style={{ fontSize:fontSize-1, color:accent, fontWeight:600, border:"none", outline:"none", fontFamily, background:"transparent", minWidth:120, flex:"1 1 140px" }} />
               : <div style={{ fontSize:fontSize-1, color:accent, fontWeight:600, flexShrink:0 }}>{job.company}</div>
             }
           </div>
-          <div style={{ display:"flex", gap:4, flexShrink:0, marginLeft:8 }}>
+          <div style={{ display:"flex", gap:4, flexShrink:0, marginLeft:"auto" }}>
             <button onClick={e=>{e.stopPropagation();dupJob(job);}} title="Duplicate job" style={{ background:"#F1F5F9",border:`1px solid ${C.border}`,cursor:"pointer",fontSize:11,color:C.slate,padding:"2px 6px",borderRadius:4 }}>Duplicate</button>
             <button onClick={e=>{e.stopPropagation();deleteJob(job.id);}} title="Delete job" style={{ background:"#FEF2F2",border:`1px solid #FECACA`,cursor:"pointer",fontSize:11,color:C.danger,padding:"2px 6px",borderRadius:4 }}>Delete</button>
           </div>
         </div>
         {isActiveJob && (
           <div style={{ display:"grid", gap:8 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr auto", gap:8, alignItems:"center" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:8, alignItems:"center" }}>
               <input value={job.location||""} onChange={e=>updateJob(job.id,"location",e.target.value)} placeholder="Location" style={{ fontSize:12, padding:"4px 8px", border:`1px solid ${C.border}`, borderRadius:6, fontFamily, outline:"none" }} />
               <input type="date" value={job.start_date||""} onChange={e=>updateJob(job.id,"start_date",e.target.value)} style={{ fontSize:12, padding:"4px 8px", border:`1px solid ${C.border}`, borderRadius:6, fontFamily, outline:"none" }} />
               {job.is_current ? <div style={{ fontSize:12, color:C.success, padding:"4px 8px" }}>Present</div> : <input type="date" value={job.end_date||""} onChange={e=>updateJob(job.id,"end_date",e.target.value)} style={{ fontSize:12, padding:"4px 8px", border:`1px solid ${C.border}`, borderRadius:6, fontFamily, outline:"none" }} />}
@@ -506,6 +589,65 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         )}
         {!isActiveJob && job.description && (
           <div style={{ fontSize:fontSize-1, color:"#334155", marginTop:4, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{job.description.slice(0,120)}{job.description.length>120?"...":""}</div>
+        )}
+      </div>
+    );
+  };
+
+  const renderStructuredSectionBlock = (section, {
+    itemKey,
+    jobsForPage = null,
+    showAddJob = true,
+    forceExperience = false,
+  } = {}) => {
+    const sid = section.id || section.section_type;
+    const isActive = activeSection === sid && !showHeaderPanel;
+    const isDragging = dragId === sid;
+    const isDropTarget = dragId && dragId !== sid && sectionDropTargetId === sid;
+    const isHovered = hoveredBlockId === sid;
+    const sectionRefKey = itemKey || `section:${sid}`;
+    const isExperience = forceExperience || section.section_type === "experience";
+
+    return (
+      <div key={sectionRefKey}
+        ref={node => { if(node) structuredSectionRefs.current[sectionRefKey] = node; }}
+        onDragOver={e=>onDragOver(e,sid)}
+        onDrop={e=>onDrop(e,sid)}
+        onClick={()=>selectSection(sid)}
+        style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:isHovered?`2px solid ${accent}66`:`2px solid transparent`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:isHovered?`${accent}04`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
+        onMouseEnter={()=>setHoveredBlockId(sid)}
+        onMouseLeave={()=>setHoveredBlockId(null)}
+      >
+        {(isActive||isHovered) && <div style={{ position:"absolute", top:-10, right:8, background:isActive?accent:"#fff", color:isActive?"#fff":C.slate, border:`1px solid ${isActive?accent:C.border}`, borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", boxShadow:"0 2px 8px rgba(15,23,42,0.08)" }}>Edit</div>}
+        {isDropTarget && <div style={{ position:"absolute", top:-5, left:10, right:10, height:5, background:accent, borderRadius:999, boxShadow:`0 0 0 4px ${accent}22` }} />}
+        <div draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:28, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}10`:"#fff", cursor:isDragging?"grabbing":"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isActive||isHovered?"0 2px 8px rgba(15,23,42,0.08)":"none" }}>
+          <DragHandleDots color={isDragging||isDropTarget?accent:"#64748B"} />
+        </div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+          <div onClick={()=>selectSection(sid)} style={{ cursor:"pointer", flex:1, minWidth:0 }}>
+            <SectionHeading label={section.label} />
+          </div>
+          <button onClick={()=>{ if(isActive) clearCanvasSelection(); else selectSection(sid); }} style={{ background:"none", border:`1px solid ${C.border}`, cursor:"pointer", fontSize:11, color:C.textMuted, padding:"2px 7px", borderRadius:5, fontFamily:"inherit" }}>
+            {isActive?"Done":"Edit"}
+          </button>
+        </div>
+        {isExperience ? (
+          <div>
+            {(jobsForPage || visibleJobs).map(job => (
+              <div key={job.id} ref={node => { if(node) structuredSectionRefs.current[`job:${job.id}`] = node; }}>
+                <JobBlock job={job} editing={true} />
+              </div>
+            ))}
+            {showAddJob && <div ref={node => { if(node) structuredSectionRefs.current[`experience:${sid}:add`] = node; }}>
+              <button onClick={addJob} style={{ background:"none", border:`1.5px dashed ${C.border}`, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:11, color:C.textMuted, fontFamily:"inherit", marginTop:4, width:"100%" }}>+ Add Job</button>
+            </div>}
+          </div>
+        ) : isActive ? (
+          <textarea autoFocus value={section.content?.text||""} onChange={e=>setContent(sid,e.target.value)} style={{ width:"100%", border:"none", outline:"none", resize:"none", fontFamily, fontSize, color:"#334155", lineHeight:1.65, background:"transparent", padding:0, minHeight:60, boxSizing:"border-box" }} rows={5} placeholder={`Enter your ${section.label.toLowerCase()}...`} />
+        ) : (
+          <div onClick={()=>selectSection(sid)} style={{ fontSize, color:section.content?.text?"#334155":"#CBD5E1", lineHeight:1.65, whiteSpace:"pre-wrap", minHeight:22, cursor:"text", overflowWrap:"break-word" }}>
+            {section.content?.text||`Click to add ${section.label.toLowerCase()}...`}
+          </div>
         )}
       </div>
     );
@@ -726,6 +868,9 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} />
       ) : (
         <>
+          <div style={{ flexShrink:0, padding:"8px 20px", background:"#F8FAFC", borderBottom:`1px solid ${C.border}`, color:C.textMuted, fontSize:12, fontWeight:600 }}>
+            Structured Resume Builder is recommended. Best for editing resume content and exporting.
+          </div>
       {/* Design panels */}
       {(showTemplates || showFonts || showDesign) && (
         <div style={{ background:C.bgCard, borderBottom:`1px solid ${C.border}`, padding:"14px 20px", flexShrink:0 }}>
@@ -814,7 +959,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               return (
                 <div key={sid} onDragOver={e=>onDragOver(e,sid)} onDrop={e=>onDrop(e,sid)} onClick={()=>selectSection(sid)}
                   style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 8px", borderRadius:7, marginBottom:3, cursor:"pointer", border:`1px solid ${isActiveSideSection||isSidebarDropTarget?C.teal:isDraggingSideSection?accent:C.border}`, background:isActiveSideSection||isSidebarDropTarget?C.tealLight:"transparent", opacity:isDraggingSideSection?0.45:s.is_visible?1:0.45 }}>
-                  <span draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" style={{ fontSize:14, color:isSidebarDropTarget||isDraggingSideSection?C.teal:C.textLight, lineHeight:1, width:14, textAlign:"center", cursor:isDraggingSideSection?"grabbing":"grab", fontWeight:800 }}>Grip</span>
+                  <span draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" style={{ width:14, minWidth:14, display:"flex", alignItems:"center", justifyContent:"center", cursor:isDraggingSideSection?"grabbing":"grab" }}><DragHandleDots color={isSidebarDropTarget||isDraggingSideSection?C.teal:C.textLight} dotSize={2.5} /></span>
                   <span style={{ fontSize:12 }}>{s.icon||"Section"}</span>
                   <span style={{ flex:1, fontSize:11, fontWeight:activeSection===sid?700:400, color:activeSection===sid&&!showHeaderPanel?C.tealDark:C.navy, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.label}</span>
                   {!s.is_required && <button onClick={e=>{e.stopPropagation();toggleVisible(sid);}} style={{ background:"none",border:"none",cursor:"pointer",fontSize:10,color:C.textLight,padding:2 }}>{s.is_visible?"Hide":"+"}</button>}
@@ -841,73 +986,60 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         {/* Canvas */}
         <div
           onClick={e=>{ if(e.target===e.currentTarget) clearCanvasSelection(); }}
-          style={{ flex:1, minWidth:0, overflow:"auto", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"clamp(20px, 3vw, 40px) clamp(16px, 4vw, 64px)" }}
+          style={{ flex:1, minWidth:0, overflowY:"auto", overflowX:"hidden", background:"#E8EEF4", display:"flex", flexDirection:"column", alignItems:"center", padding:"clamp(20px, 3vw, 40px) clamp(16px, 4vw, 64px)", boxSizing:"border-box" }}
         >
           <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, letterSpacing:"0.04em", textAlign:"center" }}>
             Drag sections to reorder - Click to edit
           </div>
-          <div style={{ width:980, maxWidth:"100%", flexShrink:1, background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6, minHeight:1100 }}>
+          <div ref={previewRef} style={{ width:structuredPageWidth, maxWidth:"100%", flexShrink:1, display:"flex", flexDirection:"column", gap:28, fontFamily, fontSize, color:"#1E293B", lineHeight:1.6, overflowWrap:"break-word", wordBreak:"break-word" }}>
+            {structuredPageGroups.map((pageSectionIds, pageIndex) => (
+              <div key={pageIndex} style={{ position:"relative", width:"100%", minHeight:structuredPageHeight, overflow:"visible", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", padding:margins, boxSizing:"border-box" }}>
+                <div style={{ position:"absolute", bottom:14, right:18, fontSize:10, color:"#CBD5E1", fontWeight:700, letterSpacing:"0.08em" }}>Page {pageIndex + 1}</div>
+                {pageIndex === 0 && (
+                  <div
+                    ref={structuredHeaderRef}
+                    style={{ position:"relative", cursor:"pointer", marginBottom:sGap, borderRadius:8, border:`2px solid ${activeSection==="name"||showHeaderPanel?accent:hoveredBlockId==="name"?accent+"66":"transparent"}`, padding:8, marginLeft:-8, marginRight:-8, background:activeSection==="name"||showHeaderPanel?`${accent}06`:"transparent", transition:"border-color 0.15s, background 0.15s" }}
+                    onMouseEnter={()=>setHoveredBlockId("name")}
+                    onMouseLeave={()=>setHoveredBlockId(null)}
+                    onClick={()=>selectSection("name", "header")}
+                  >
+                    <div style={{ position:"absolute", top:-10, right:8, background:accent, color:"#fff", borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", opacity:activeSection==="name"||showHeaderPanel||hoveredBlockId==="name"?1:0, transition:"opacity 0.12s" }}>Edit Header</div>
+                    <div key="stable-resume-header-editor">
+                      {renderResumeHeader(true)}
+                    </div>
+                  </div>
+                )}
 
-            {/* Header */}
-            <div
-              style={{ position:"relative", cursor:"pointer", marginBottom:sGap, borderRadius:8, border:`2px solid ${activeSection==="name"||showHeaderPanel?accent:hoveredBlockId==="name"?accent+"66":"transparent"}`, padding:8, marginLeft:-8, marginRight:-8, background:activeSection==="name"||showHeaderPanel?`${accent}06`:"transparent", transition:"border-color 0.15s, background 0.15s" }}
-              onMouseEnter={()=>setHoveredBlockId("name")}
-              onMouseLeave={()=>setHoveredBlockId(null)}
-              onClick={()=>selectSection("name", "header")}
-            >
-              <div style={{ position:"absolute", top:-10, right:8, background:accent, color:"#fff", borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", opacity:activeSection==="name"||showHeaderPanel||hoveredBlockId==="name"?1:0, transition:"opacity 0.12s" }}>Edit Header</div>
-              <div key="stable-resume-header-editor">
-                {renderResumeHeader(true)}
+                {(() => {
+                  const pageItems = pageSectionIds.map(key => structuredItemMap[key]).filter(Boolean);
+                  const normalItems = pageItems.filter(item => item.type === "section");
+                  const experienceItems = pageItems.filter(item => item.type === "experienceHeader" || item.type === "job" || item.type === "experienceAdd");
+                  const experienceJobsForPage = experienceItems
+                    .filter(item => item.type === "job")
+                    .map(item => visibleJobs.find(job => job.id === item.jobId))
+                    .filter(Boolean);
+                  const showExperienceAdd = experienceItems.some(item => item.type === "experienceAdd");
+                  const experienceItemKey = experienceItems.find(item => item.type === "experienceHeader")?.key || `experience:${experienceSectionId}:page:${pageIndex}`;
+
+                  return (
+                    <>
+                      {normalItems.map(item => {
+                        const section = visibleStructuredSections.find(candidate => getSectionId(candidate) === item.sectionId);
+                        return section ? renderStructuredSectionBlock(section, { itemKey:item.key }) : null;
+                      })}
+                      {experienceItems.length > 0 && experienceSection && renderStructuredSectionBlock(experienceSection, {
+                        itemKey:experienceItemKey,
+                        jobsForPage:experienceJobsForPage,
+                        showAddJob:showExperienceAdd,
+                        forceExperience:true,
+                      })}
+                    </>
+                  );
+                })()}
               </div>
-            </div>
-
-            {/* Sections */}
-            {sorted.filter(s=>s.is_visible).map(s => {
-              if(s.section_type==="name") return null;
-              const sid = s.id||s.section_type;
-              const isActive = activeSection===sid && !showHeaderPanel;
-              const isDragging = dragId===sid;
-              const isDropTarget = dragId && dragId!==sid && sectionDropTargetId===sid;
-              const isHovered = hoveredBlockId===sid;
-              return (
-                <div key={sid}
-                  onDragOver={e=>onDragOver(e,sid)}
-                  onDrop={e=>onDrop(e,sid)}
-                  onClick={()=>selectSection(sid)}
-                  style={{ marginBottom:sGap, position:"relative", borderRadius:8, border:isActive?`2px solid ${accent}`:isDropTarget?`2px solid ${accent}`:isDragging?`2px dashed ${accent}`:isHovered?`2px solid ${accent}66`:`2px solid transparent`, padding:"8px 10px 8px 42px", background:isActive?`${accent}06`:isDropTarget?`${accent}08`:isHovered?`${accent}04`:"transparent", opacity:isDragging?0.4:1, transition:"border-color 0.15s, background 0.15s", boxShadow:isDropTarget?`0 0 0 3px ${accent}18`:"none" }}
-                  onMouseEnter={()=>setHoveredBlockId(sid)}
-                  onMouseLeave={()=>setHoveredBlockId(null)}
-                >
-                  {(isActive||isHovered) && <div style={{ position:"absolute", top:-10, right:8, background:isActive?accent:"#fff", color:isActive?"#fff":C.slate, border:`1px solid ${isActive?accent:C.border}`, borderRadius:999, padding:"2px 7px", fontSize:10, fontWeight:700, pointerEvents:"none", boxShadow:"0 2px 8px rgba(15,23,42,0.08)" }}>Edit</div>}
-                  {isDropTarget && <div style={{ position:"absolute", top:-5, left:10, right:10, height:5, background:accent, borderRadius:999, boxShadow:`0 0 0 4px ${accent}22` }} />}
-                  <div draggable onDragStart={e=>onDragStart(e,sid)} onDragEnd={()=>{ setDragId(null); setSectionDropTargetId(null); }} onClick={e=>e.stopPropagation()} title="Drag to reorder section" aria-label="Drag to reorder section" style={{ position:"absolute", left:6, top:8, bottom:8, width:28, border:`1px solid ${isDragging||isDropTarget?accent:C.border}`, borderRadius:7, background:isDragging||isDropTarget?`${accent}10`:"#fff", cursor:isDragging?"grabbing":"grab", userSelect:"none", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:isActive||isHovered?"0 2px 8px rgba(15,23,42,0.08)":"none" }}>
-                    <div style={{ color:isDragging||isDropTarget?accent:"#64748B", fontSize:17, lineHeight:1, fontWeight:800 }}>Grip</div>
-                  </div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                    <div onClick={()=>selectSection(sid)} style={{ cursor:"pointer", flex:1 }}>
-                      <SectionHeading label={s.label} />
-                    </div>
-                    <button onClick={()=>{ if(isActive) clearCanvasSelection(); else selectSection(sid); }} style={{ background:"none", border:`1px solid ${C.border}`, cursor:"pointer", fontSize:11, color:C.textMuted, padding:"2px 7px", borderRadius:5, fontFamily:"inherit" }}>
-                      {isActive?"Done":"Edit"}
-                    </button>
-                  </div>
-                  {s.section_type==="experience" ? (
-                    <div>
-                      {sortedJobs.filter(j=>j.is_visible!==false).map(j=><JobBlock key={j.id} job={j} editing={true} />)}
-                      <button onClick={addJob} style={{ background:"none", border:`1.5px dashed ${C.border}`, borderRadius:7, padding:"5px 12px", cursor:"pointer", fontSize:11, color:C.textMuted, fontFamily:"inherit", marginTop:4, width:"100%" }}>+ Add Job</button>
-                    </div>
-                  ) : isActive ? (
-                    <textarea autoFocus value={s.content?.text||""} onChange={e=>setContent(sid,e.target.value)} style={{ width:"100%", border:"none", outline:"none", resize:"none", fontFamily, fontSize, color:"#334155", lineHeight:1.65, background:"transparent", padding:0, minHeight:60, boxSizing:"border-box" }} rows={5} placeholder={`Enter your ${s.label.toLowerCase()}...`} />
-                  ) : (
-                    <div onClick={()=>selectSection(sid)} style={{ fontSize, color:s.content?.text?"#334155":"#CBD5E1", lineHeight:1.65, whiteSpace:"pre-wrap", minHeight:22, cursor:"text" }}>
-                      {s.content?.text||`Click to add ${s.label.toLowerCase()}...`}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            ))}
             {sorted.filter(s=>!s.is_visible&&s.section_type!=="name").length>0 && (
-              <div style={{ marginTop:12, padding:"6px 12px", background:"#F1F5F9", borderRadius:7, fontSize:11, color:C.textMuted }}>
+              <div style={{ padding:"6px 12px", background:"#F1F5F9", borderRadius:7, fontSize:11, color:C.textMuted }}>
                 Hidden: {sorted.filter(s=>!s.is_visible&&s.section_type!=="name").map(s=>s.label).join(", ")}
               </div>
             )}
@@ -933,4 +1065,13 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   );
 }
 // AI Optimizer
+
+
+
+
+
+
+
+
+
 

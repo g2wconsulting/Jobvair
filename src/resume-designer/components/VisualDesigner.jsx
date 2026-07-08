@@ -1,6 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createBlock, createDefaultDesign } from "../designDefaults.js";
-import { clampBlockToPage } from "../designSchema.js";
 
 const C = {
   navy: "#0F172A",
@@ -27,8 +26,17 @@ function getPage(design) {
   return design.pages[0];
 }
 
+function createBlankPage(pageNumber, design) {
+  return {
+    id: `page_${pageNumber}`,
+    pageNumber,
+    background: design.theme?.backgroundColor || "#FFFFFF",
+    blocks: [],
+  };
+}
+
 function getBlocks(design) {
-  return getPage(design).blocks || [];
+  return design.pages.flatMap(page => (page.blocks || []).map(block => ({ ...block, pageId: page.id })));
 }
 
 function updateBlockInDesign(design, blockId, updater) {
@@ -41,12 +49,54 @@ function updateBlockInDesign(design, blockId, updater) {
   };
 }
 
-function addBlockToDesign(design, block) {
+function moveBlockInDesign(design, blockId, x, y) {
+  const pageHeight = design.page.height;
+  const pageWidth = design.page.width;
+  let pages = design.pages.map(page => ({ ...page, blocks: [...page.blocks] }));
+  let sourcePageIndex = pages.findIndex(page => page.blocks.some(block => block.id === blockId));
+  if (sourcePageIndex < 0) return design;
+
+  const sourcePage = pages[sourcePageIndex];
+  const blockIndex = sourcePage.blocks.findIndex(block => block.id === blockId);
+  const block = sourcePage.blocks[blockIndex];
+  let targetPageIndex = sourcePageIndex;
+  let nextY = y;
+
+  if (y + block.height > pageHeight - 24) {
+    targetPageIndex = sourcePageIndex + 1;
+    nextY = 40;
+  } else if (y < 0 && sourcePageIndex > 0) {
+    targetPageIndex = sourcePageIndex - 1;
+    nextY = pageHeight - block.height - 40;
+  }
+
+  while (targetPageIndex >= pages.length) {
+    pages.push(createBlankPage(pages.length + 1, design));
+  }
+
+  const movedBlock = {
+    ...block,
+    pageId: pages[targetPageIndex].id,
+    x: Math.max(0, Math.min(x, pageWidth - Math.min(block.width, pageWidth))),
+    y: Math.max(0, Math.min(nextY, pageHeight - Math.min(block.height, pageHeight))),
+  };
+
+  pages[sourcePageIndex].blocks.splice(blockIndex, 1);
+  pages[targetPageIndex].blocks.push(movedBlock);
+
   return {
     ...design,
-    pages: design.pages.map((page, index) => index === 0 ? {
+    pages,
+  };
+}
+
+function addBlockToDesign(design, block) {
+  const targetPageId = block.pageId || design.pages[0]?.id || "page_1";
+  return {
+    ...design,
+    pages: design.pages.map(page => page.id === targetPageId ? {
       ...page,
-      blocks: [...page.blocks, block],
+      blocks: [...page.blocks, { ...block, pageId: targetPageId }],
     } : page),
   };
 }
@@ -109,6 +159,8 @@ function CanvasBlock({ block, selected, zoom, onSelect, onMove }) {
           boxSizing: "border-box",
           overflow: "hidden",
           whiteSpace: isShape ? "normal" : "pre-wrap",
+          overflowWrap: "break-word",
+          wordBreak: "break-word",
           fontFamily: block.style.fontFamily,
           fontSize: block.style.fontSize,
           fontWeight: block.style.fontWeight,
@@ -215,19 +267,39 @@ function Inspector({ block, onStyleChange, onTextChange }) {
 export function VisualDesigner({ headerConfig, sections, jobEntries }) {
   const [design, setDesign] = useState(() => createDefaultDesign({ header: headerConfig, sections: sections || [], jobs: jobEntries || [] }));
   const [selectedBlockId, setSelectedBlockId] = useState("profile_name_1");
-  const [zoom, setZoom] = useState(0.82);
+  const [zoom, setZoom] = useState(0.72);
+  const canvasRef = useRef(null);
+  const [fitZoom, setFitZoom] = useState(0.72);
 
   useEffect(() => {
     setDesign(createDefaultDesign({ header: headerConfig, sections: sections || [], jobs: jobEntries || [] }));
     setSelectedBlockId("profile_name_1");
   }, [headerConfig, sections, jobEntries]);
 
+  useEffect(() => {
+    const node = canvasRef.current;
+    if (!node) return undefined;
+
+    const updateFitZoom = () => {
+      const availableWidth = node.clientWidth - 48;
+      const nextZoom = Math.max(0.45, Math.min(0.82, availableWidth / 816));
+      setFitZoom(Number(nextZoom.toFixed(2)));
+    };
+
+    updateFitZoom();
+    const resizeObserver = new ResizeObserver(updateFitZoom);
+    resizeObserver.observe(node);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   const page = getPage(design);
+  const pages = design.pages;
   const blocks = useMemo(() => getBlocks(design).filter(block => block.visible !== false).sort((a, b) => a.zIndex - b.zIndex), [design]);
   const selectedBlock = blocks.find(block => block.id === selectedBlockId) || null;
+  const displayZoom = Math.min(zoom, fitZoom);
 
   const moveBlock = (blockId, x, y) => {
-    setDesign(current => updateBlockInDesign(current, blockId, (block, currentPage) => clampBlockToPage({ ...block, x, y }, currentPage)));
+    setDesign(current => moveBlockInDesign(current, blockId, x, y));
   };
 
   const updateSelectedStyle = (key, value) => {
@@ -280,8 +352,8 @@ export function VisualDesigner({ headerConfig, sections, jobEntries }) {
   };
 
   return (
-    <div style={{ display:"flex", flex:1, minWidth:0, overflow:"hidden", background:"#DDE7F0" }}>
-      <aside style={{ width:220, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.light}`, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+    <div style={{ display:"flex", flex:1, minWidth:0, maxWidth:"100%", overflow:"hidden", background:"#DDE7F0" }}>
+      <aside style={{ width:200, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.light}`, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <div style={{ padding:14, borderBottom:`1px solid ${C.light}` }}>
           <div style={{ fontSize:13, fontWeight:900, color:C.navy }}>Visual Designer</div>
           <div style={{ fontSize:11, color:C.muted, marginTop:3, lineHeight:1.4 }}>Local prototype. Drag blocks on the page.</div>
@@ -301,23 +373,36 @@ export function VisualDesigner({ headerConfig, sections, jobEntries }) {
         </div>
       </aside>
 
-      <main style={{ flex:1, minWidth:0, overflow:"auto", display:"flex", flexDirection:"column", alignItems:"center", padding:"24px 32px" }} onClick={e=>{ if(e.target === e.currentTarget) setSelectedBlockId(null); }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, color:C.slate, fontSize:12 }}>
+      <main ref={canvasRef} style={{ flex:1, minWidth:0, overflowY:"auto", overflowX:"hidden", display:"flex", flexDirection:"column", alignItems:"center", padding:"18px clamp(12px, 2vw, 24px)", boxSizing:"border-box", background:"linear-gradient(180deg, #E8EEF4 0%, #DDE7F0 100%)" }} onClick={e=>{ if(e.target === e.currentTarget) setSelectedBlockId(null); }}>
+        <div style={{ width:"min(100%, 760px)", boxSizing:"border-box", marginBottom:12, padding:"10px 14px", borderRadius:12, border:`1px solid ${C.light}`, background:"#FFFFFF", color:C.slate, fontSize:12, lineHeight:1.45, boxShadow:"0 8px 24px rgba(15,23,42,0.08)" }}>
+          <strong style={{ color:C.navy }}>Visual Designer is a prototype.</strong> Changes are local only. Use Structured mode for resume content editing, saving, exporting, and reliable formatting.
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, color:C.slate, fontSize:12, background:"rgba(255,255,255,0.82)", border:`1px solid ${C.light}`, borderRadius:999, padding:"6px 10px" }}>
           <span>Zoom</span>
-          {[0.7, 0.82, 1].map(value => (
-            <button key={value} onClick={()=>setZoom(value)} style={{ border:`1px solid ${zoom === value ? C.teal : C.light}`, background:zoom === value ? C.tealLight : "#fff", borderRadius:999, padding:"4px 9px", fontSize:11, fontWeight:800, cursor:"pointer" }}>{Math.round(value * 100)}%</button>
+          {[0.62, 0.72, 0.85, 1].map(value => (
+            <button key={value} onClick={()=>setZoom(value)} style={{ border:`1px solid ${zoom === value ? C.teal : C.light}`, background:zoom === value ? C.tealLight : "#fff", borderRadius:999, padding:"4px 9px", fontSize:11, fontWeight:800, cursor:"pointer" }}>{Math.round(Math.min(value, fitZoom) * 100)}%</button>
           ))}
         </div>
-        <div style={{ transform:`scale(${zoom})`, transformOrigin:"top center", width:page.width, height:page.height, marginBottom: page.height * (zoom - 1) + 40 }}>
-          <div style={{ position:"relative", width:page.width, height:page.height, background:page.background, boxShadow:"0 14px 54px rgba(15,23,42,0.25)", overflow:"hidden" }}>
-            {blocks.map(block => (
-              <CanvasBlock key={block.id} block={block} selected={selectedBlockId === block.id} zoom={zoom} onSelect={setSelectedBlockId} onMove={moveBlock} />
-            ))}
+        <div style={{ width:"100%", minWidth:0, height:(page.height * pages.length + 56 * Math.max(0, pages.length - 1)) * displayZoom + 24, display:"flex", justifyContent:"center", alignItems:"flex-start" }}>
+          <div style={{ transform:`scale(${displayZoom})`, transformOrigin:"top center", width:page.width, position:"relative", display:"flex", flexDirection:"column", gap:56 }}>
+            {pages.map(currentPage => {
+              const pageBlocks = blocks.filter(block => block.pageId === currentPage.id);
+              return (
+                <div key={currentPage.id} style={{ position:"relative", width:page.width, height:page.height }}>
+                  <div style={{ position:"absolute", top:-26, left:0, fontSize:10, fontWeight:800, color:C.muted, letterSpacing:"0.08em", textTransform:"uppercase" }}>Page {currentPage.pageNumber}</div>
+                  <div style={{ position:"relative", width:page.width, height:page.height, background:currentPage.background || "#FFFFFF", border:"1px solid #CBD5E1", boxShadow:"0 18px 60px rgba(15,23,42,0.24)", overflow:"hidden" }}>
+                    {pageBlocks.map(block => (
+                      <CanvasBlock key={block.id} block={block} selected={selectedBlockId === block.id} zoom={displayZoom} onSelect={setSelectedBlockId} onMove={moveBlock} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </main>
 
-      <aside style={{ width:280, flexShrink:0, background:"#fff", borderLeft:`1px solid ${C.light}`, overflowY:"auto" }}>
+      <aside style={{ width:260, flexShrink:0, background:"#fff", borderLeft:`1px solid ${C.light}`, overflowY:"auto", overflowX:"hidden" }}>
         <Inspector block={selectedBlock} onStyleChange={updateSelectedStyle} onTextChange={updateSelectedText} />
       </aside>
     </div>
