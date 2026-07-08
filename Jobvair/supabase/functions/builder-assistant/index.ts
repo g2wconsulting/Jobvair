@@ -1,0 +1,211 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const BUILDER_ASSISTANT_PAYLOAD_VERSION = "builder_assistant_payload_v1";
+const ASSISTANT_RESPONSE_VERSION = "builder_assistant_response_v1";
+
+type ValidationIssue = {
+  path: string;
+  message: string;
+};
+
+type ValidationResult = {
+  valid: boolean;
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const addError = (errors: ValidationIssue[], path: string, message: string) => {
+  errors.push({ path, message });
+};
+
+function validateBuilderAssistantPayload(payload: unknown): ValidationResult {
+  const errors: ValidationIssue[] = [];
+  const warnings: ValidationIssue[] = [];
+
+  if (!isPlainObject(payload)) {
+    addError(errors, "$", "Expected builder assistant payload to be an object.");
+    return { valid: false, errors, warnings };
+  }
+
+  if (payload.version !== BUILDER_ASSISTANT_PAYLOAD_VERSION) {
+    addError(errors, "$.version", `Expected version to be ${BUILDER_ASSISTANT_PAYLOAD_VERSION}.`);
+  }
+
+  ["resume_id", "user_id"].forEach(key => {
+    const value = payload[key];
+    if (value !== null && typeof value !== "string") {
+      addError(errors, `$.${key}`, "Expected value to be a string or null.");
+    }
+  });
+
+  if (typeof payload.resume_name !== "string") {
+    addError(errors, "$.resume_name", "Expected resume_name to be a string.");
+  }
+
+  if (!isPlainObject(payload.header)) {
+    addError(errors, "$.header", "Expected header to be an object.");
+  }
+
+  if (!Array.isArray(payload.sections)) {
+    addError(errors, "$.sections", "Expected sections to be an array.");
+  } else {
+    payload.sections.forEach((section, index) => {
+      if (!isPlainObject(section)) {
+        addError(errors, `$.sections[${index}]`, "Expected section to be an object.");
+        return;
+      }
+      if (typeof section.section_type !== "string" || !section.section_type.trim()) {
+        addError(errors, `$.sections[${index}].section_type`, "Expected a non-empty section_type string.");
+      }
+    });
+  }
+
+  if (!Array.isArray(payload.jobs)) {
+    addError(errors, "$.jobs", "Expected jobs to be an array.");
+  }
+
+  if (!isPlainObject(payload.template)) {
+    addError(errors, "$.template", "Expected template to be an object.");
+  }
+
+  if (!isPlainObject(payload.profile_context)) {
+    addError(errors, "$.profile_context", "Expected profile_context to be an object.");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+function createMockAssistantResponse(payload: Record<string, unknown>) {
+  const sections = Array.isArray(payload.sections) ? payload.sections : [];
+  const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+  const summaryIndex = sections.findIndex(section =>
+    isPlainObject(section) && section.section_type === "summary"
+  );
+  const summarySection = summaryIndex >= 0 && isPlainObject(sections[summaryIndex])
+    ? sections[summaryIndex]
+    : null;
+  const summaryContent = isPlainObject(summarySection?.content) ? summarySection.content : {};
+  const summaryText = summaryContent.text || summaryContent.body;
+  const firstJob = jobs.find(isPlainObject) as Record<string, unknown> | undefined;
+  const operations = [];
+  const suggestions = [];
+
+  if (summaryIndex >= 0 && !summaryText) {
+    operations.push({
+      op: "merge",
+      target: `sections[${summaryIndex}].content`,
+      value: {
+        text: "Add a focused professional summary tailored to the target role.",
+      },
+      metadata: {
+        reason: "Summary section is present but appears empty.",
+        source: "builder_payload",
+        evidence: ["summary section has no text"],
+        confidence: 0.72,
+        safe_to_apply: false,
+      },
+    });
+  }
+
+  if (firstJob) {
+    const jobEvidence =
+      typeof firstJob.job_title === "string" && firstJob.job_title.trim()
+        ? firstJob.job_title
+        : typeof firstJob.company === "string" && firstJob.company.trim()
+          ? firstJob.company
+          : "first job entry";
+
+    suggestions.push({
+      id: "mock_sug_1",
+      type: "missing_metric",
+      target: "jobs[0].description",
+      message: "Consider adding a measurable outcome to the first work experience entry.",
+      severity: "medium",
+      confidence: 0.68,
+      action: "improve_bullet",
+      metadata: {
+        reason: "Impact metrics help recruiters evaluate scope and results.",
+        source: "builder_payload",
+        evidence: [jobEvidence],
+        confidence: 0.68,
+        safe_to_apply: false,
+      },
+    });
+  }
+
+  return {
+    version: ASSISTANT_RESPONSE_VERSION,
+    message: "Mock assistant response generated by the builder-assistant Edge Function.",
+    confidence: {
+      overall: 0.75,
+      rationale: "Development mock based on available builder payload fields only.",
+    },
+    patch: {
+      header: {},
+      sections: [],
+      jobs: [],
+      operations,
+    },
+    suggestions,
+    warnings: [
+      {
+        code: "mock_response",
+        message: "This response is a local mock and was not generated by an AI provider.",
+        severity: "low",
+      },
+    ],
+  };
+}
+
+Deno.serve(async request => {
+  if (request.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (request.method !== "POST") {
+    return Response.json(
+      { error: "Method not allowed. Use POST." },
+      { status: 405, headers: corsHeaders },
+    );
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch (_error) {
+    return Response.json(
+      {
+        error: "Invalid JSON request body.",
+      },
+      { status: 400, headers: corsHeaders },
+    );
+  }
+
+  const validation = validateBuilderAssistantPayload(payload);
+  if (!validation.valid) {
+    return Response.json(
+      {
+        error: "Invalid BuilderAssistantPayload.",
+        validation,
+      },
+      { status: 400, headers: corsHeaders },
+    );
+  }
+
+  return Response.json(
+    createMockAssistantResponse(payload as Record<string, unknown>),
+    { headers: corsHeaders },
+  );
+});
+
