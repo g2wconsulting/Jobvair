@@ -9,6 +9,7 @@ import {
 } from "./assistantValidation.js";
 import { createPatchPreviewDiff } from "./diffHelpers.js";
 import { applyPatchPreview as applyResponsePatchPreview } from "./patchHelpers.js";
+import { edgeFetch } from "../lib/edgeFetch.js";
 
 const cloneValue = value => {
   if (typeof structuredClone === "function") {
@@ -47,6 +48,9 @@ export function buildPayload(builderState = {}) {
     jobs: normalizeArray(builderState.jobs ?? builderState.workExperience),
     template: normalizeObject(builderState.template ?? builderState.selectedTemplate),
     profile_context: normalizeObject(builderState.profile_context ?? builderState.profileContext ?? builderState.profile),
+    instruction: typeof builderState.instruction === "string" ? builderState.instruction : "",
+    job_description: typeof builderState.job_description === "string" ? builderState.job_description : "",
+    action_preset: builderState.action_preset ?? null,
   };
 }
 
@@ -129,9 +133,11 @@ function createMockAssistantResponse(payload) {
 /**
  * Request assistant suggestions.
  *
- * Phase 2 intentionally returns a local mock response only. Future phases can
- * replace this function internals with an authenticated Edge Function call
- * without changing the UI-facing client shape.
+ * Calls the authenticated `builder-assistant` Supabase Edge Function. If the
+ * function is unreachable (e.g. not deployed yet in local dev), this falls
+ * back to a local mock response so the UI remains usable during development.
+ * The fallback always carries a `mock_response` warning so callers can tell
+ * the difference.
  *
  * @param {import("./assistantContracts.js").BuilderAssistantPayload} payload
  * @returns {Promise<import("./assistantContracts.js").AssistantResponse>}
@@ -144,10 +150,17 @@ export async function requestSuggestions(payload) {
     throw error;
   }
 
-  const response = createMockAssistantResponse(payload);
+  let response;
+  try {
+    response = await edgeFetch("builder-assistant", payload);
+  } catch (err) {
+    console.warn("[assistant] builder-assistant Edge Function unavailable, using local mock:", err.message);
+    response = createMockAssistantResponse(payload);
+  }
+
   const responseValidation = validateResponse(response);
   if (!responseValidation.valid) {
-    const error = new Error("Invalid mock assistant response.");
+    const error = new Error("Invalid assistant response.");
     error.validation = responseValidation;
     throw error;
   }

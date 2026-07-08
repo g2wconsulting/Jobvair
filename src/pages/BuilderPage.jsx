@@ -8,6 +8,7 @@ import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx
 import { SectionHeadingRenderer } from "../resume-templates/renderers/SectionHeadingRenderer.jsx";
 import { findResumeTemplateBySlug, getPersistableTemplateId, mergeResumeTemplates } from "../resume-templates/templateRegistry.js";
 import { VisualDesigner } from "../resume-designer/components/VisualDesigner.jsx";
+import AssistantPanel from "../assistant/AssistantPanel.jsx";
 
 export default function BuilderPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
   const profile = profileForm || EMPTY_USER;
@@ -43,6 +44,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [previewMode,    setPreviewMode]     = useState(false);
   const [builderMode,    setBuilderMode]     = useState("structured");
   const [measuredHeights, setMeasuredHeights] = useState({});
+  const [assistantOpen,  setAssistantOpen]   = useState(false);
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
   const structuredHeaderRef = useRef(null);
@@ -885,6 +887,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         )}
         {builderMode === "structured" ? (
           <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            <Btn small variant="secondary" onClick={()=>setAssistantOpen(true)}>✨ Assistant</Btn>
             <Btn small variant="secondary" onClick={enterPreviewMode}>Preview</Btn>
             <Btn small variant="secondary" onClick={exportPDF}>PDF</Btn>
             <Btn small disabled={saveState==="saving"} onClick={saveResume}>{saveState==="saving"?"Saving...":"Save"}</Btn>
@@ -895,6 +898,31 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           </div>
         )}
       </div>
+
+      {assistantOpen && (
+        <AssistantPanel
+          onClose={()=>setAssistantOpen(false)}
+          builderState={{
+            resume_id: resumeId,
+            user_id: user?.id ?? null,
+            resume_name: resumeName,
+            header: normalizeHeaderConfig(headerConfig),
+            sections: sections || [],
+            jobs: jobEntries || [],
+            template: selectedTmpl || {},
+            profile_context: {
+              name: profile.name, email: profile.email, phone: profile.phone, location: profile.location,
+              summary: profile.summary, desired_titles: profile.desiredTitles, industries: profile.industries,
+              skills, work, education: edu,
+            },
+          }}
+          onApply={(previewPayload) => {
+            if (previewPayload.header) setHeaderConfig(h => ({ ...normalizeHeaderConfig(h), ...previewPayload.header }));
+            if (Array.isArray(previewPayload.sections) && previewPayload.sections.length) setSections(previewPayload.sections);
+            if (Array.isArray(previewPayload.jobs) && previewPayload.jobs.length) setJobEntries(previewPayload.jobs);
+          }}
+        />
+      )}
 
       {builderMode === "visual" ? (
         <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} />

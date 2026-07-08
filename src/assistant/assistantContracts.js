@@ -122,6 +122,9 @@
  * @property {AssistantJobPayload[]} jobs
  * @property {AssistantTemplatePayload} template
  * @property {AssistantProfileContext} profile_context
+ * @property {string=} instruction Free-text instruction from the user, e.g. "tailor to this job".
+ * @property {string=} job_description Optional pasted job description used for tailoring.
+ * @property {string=} action_preset Optional machine-readable preset id, such as rewrite_summary.
  */
 
 /**
@@ -235,6 +238,9 @@ export function createEmptyBuilderAssistantPayload() {
     jobs: [],
     template: {},
     profile_context: {},
+    instruction: "",
+    job_description: "",
+    action_preset: null,
   };
 }
 
