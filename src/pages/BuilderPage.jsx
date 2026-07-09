@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { C, DEFAULT_SECTIONS, EMPTY_USER, FONT_PRESETS, HEADER_LAYOUTS } from "../constants/appConstants.js";
-import { Btn } from "../components/ui.jsx";
+import { Button } from "../components/ui/index.js";
 import { Settings2, LayoutTemplate, IdCard, Type, Palette, Sparkles, Eye, Download, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import "./BuilderToolbar.css";
 import { edgeFetch } from "../lib/edgeFetch.js";
@@ -710,8 +710,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       <div style={{ position:"sticky", top:0, zIndex:10, background:"#1E293B", padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24, borderRadius:10 }}>
         <div style={{ fontSize:13, fontWeight:600, color:"#94A3B8" }}>Preview - {resumeName}</div>
         <div style={{ display:"flex", gap:8 }}>
-          <Btn small onClick={exportPDF} variant="secondary">Export PDF</Btn>
-          <Btn small onClick={() => setPreviewMode(false)}>Back to Editor</Btn>
+          <Button size="sm" variant="secondary" onClick={exportPDF}>Export PDF</Button>
+          <Button size="sm" onClick={() => setPreviewMode(false)}>Back to Editor</Button>
         </div>
       </div>
       <div style={{ display:"flex", justifyContent:"center", background:"#E2E8F0", padding:"32px 24px", borderRadius:12, minHeight:800 }}>
