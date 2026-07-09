@@ -105,42 +105,6 @@ export default function ResumesPage({ onNav, user }) {
           </div>
         </div>
       )}
-
-      <SectionTitle sub="Choose a starting template. Free templates available to all users. Premium templates unlock with a paid plan.">Resume Templates</SectionTitle>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:16 }}>
-        {dbTemplates.map(t => (
-          <Card key={t.id} hover style={{ textAlign:"center", cursor:"pointer", padding:0, overflow:"hidden" }} onClick={() => onNav("builder")}>
-            {/* Template mini-preview */}
-            <div style={{ height:120, background:`${t.accent_color || C.teal}10`, position:"relative", overflow:"hidden", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"10px 12px" }}>
-              {/* Simulated resume header */}
-              <div style={{ width:"100%", background:"#fff", borderRadius:4, padding:"8px 10px", boxShadow:"0 2px 8px rgba(0,0,0,0.1)" }}>
-                {t.header_style === "bold_banner" ? (
-                  <div style={{ background:t.accent_color || C.teal, margin:"-8px -10px 6px", padding:"6px 10px", borderRadius:"4px 4px 0 0" }}>
-                    <div style={{ height:6, background:"rgba(255,255,255,0.9)", borderRadius:2, marginBottom:3, width:"60%" }} />
-                    <div style={{ height:3, background:"rgba(255,255,255,0.6)", borderRadius:2, width:"40%" }} />
-                  </div>
-                ) : (
-                  <div style={{ borderBottom:`2px solid ${t.accent_color || C.teal}`, paddingBottom:4, marginBottom:5 }}>
-                    <div style={{ height:6, background:"#1E293B", borderRadius:2, marginBottom:3, width:"55%", ...(t.header_style === "centered" ? { margin:"0 auto 3px" } : {}) }} />
-                    <div style={{ height:3, background:t.accent_color || C.teal, borderRadius:2, width:"35%", ...(t.header_style === "centered" ? { margin:"0 auto" } : {}) }} />
-                  </div>
-                )}
-                {[70, 90, 80, 60, 85].map((w, i) => (
-                  <div key={i} style={{ height:2, background:"#E2E8F0", borderRadius:1, marginBottom:2, width:`${w}%` }} />
-                ))}
-              </div>
-            </div>
-            <div style={{ padding:"12px 14px" }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:3 }}>{t.name}</div>
-              <div style={{ fontSize:11, color:C.textMuted, marginBottom:8 }}>{t.description}</div>
-              <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap" }}>
-                {t.tier === "free" ? <Badge color="teal">Free</Badge> : <Badge color="gold">⭐ {t.tier === "premium" ? "Pro" : "Career+"}</Badge>}
-                {t.ats_friendly && <Badge color="green">ATS</Badge>}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 }
