@@ -136,3 +136,164 @@
 
 .jv-save-indicator--saved { color: var(--jv-color-success-600); }
 .jv-save-indicator--error { color: var(--jv-color-danger-600); }
+
+.jv-panel-bar {
+  background: var(--jv-color-surface);
+  border-bottom: 1px solid var(--jv-color-border);
+  padding: 16px 20px;
+  flex-shrink: 0;
+  font-family: var(--jv-font-sans);
+}
+
+.jv-panel-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.jv-panel-title {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--jv-color-heading);
+}
+
+.jv-panel-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--jv-color-muted);
+  margin-bottom: 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.jv-panel-done {
+  border: none;
+  background: transparent;
+  color: var(--jv-color-muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: var(--jv-radius-xs);
+}
+
+.jv-panel-done:hover {
+  background: var(--jv-color-slate-50);
+  color: var(--jv-color-heading);
+}
+
+.jv-chip {
+  padding: 8px 14px;
+  border-radius: var(--jv-radius-sm);
+  cursor: pointer;
+  transition: all var(--jv-duration-fast) ease;
+  border: 1.5px solid var(--jv-color-border);
+  background: var(--jv-color-slate-50);
+}
+
+.jv-chip--active {
+  border-color: var(--jv-color-primary);
+  background: var(--jv-color-teal-50);
+  box-shadow: var(--jv-shadow-xs);
+}
+
+.jv-chip--disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.jv-chip__title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--jv-color-heading);
+}
+
+.jv-chip__meta {
+  font-size: 10px;
+  color: var(--jv-color-muted);
+  margin-top: 2px;
+}
+
+.jv-chip__meta--active {
+  color: var(--jv-color-primary-hover);
+  font-weight: 700;
+}
+
+.jv-reset-link {
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  color: var(--jv-color-muted);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 5px 10px;
+  border-radius: var(--jv-radius-xs);
+}
+
+.jv-reset-link:hover {
+  background: var(--jv-color-slate-50);
+  color: var(--jv-color-heading);
+}
+
+.jv-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  border: 2px solid var(--jv-color-border);
+  transition: transform var(--jv-duration-fast) ease, border-color var(--jv-duration-fast) ease;
+}
+
+.jv-swatch--active {
+  border-color: var(--jv-color-heading);
+  transform: scale(1.12);
+}
+
+.jv-stepper-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--jv-radius-xs);
+  border: 1px solid var(--jv-color-border);
+  background: var(--jv-color-surface);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--jv-color-heading);
+  transition: background-color var(--jv-duration-fast) ease;
+}
+
+.jv-stepper-btn:hover {
+  background: var(--jv-color-slate-50);
+}
+
+.jv-stepper-value {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--jv-color-heading);
+  min-width: 22px;
+  text-align: center;
+}
+
+.jv-pill-option {
+  padding: 6px 14px;
+  border-radius: var(--jv-radius-sm);
+  border: 1.5px solid var(--jv-color-border);
+  background: var(--jv-color-slate-50);
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--jv-color-slate-600);
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: capitalize;
+  transition: all var(--jv-duration-fast) ease;
+}
+
+.jv-pill-option--active {
+  border-color: var(--jv-color-primary);
+  background: var(--jv-color-teal-50);
+  color: var(--jv-color-primary-hover);
+}
+

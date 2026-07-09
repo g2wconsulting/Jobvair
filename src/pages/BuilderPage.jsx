@@ -961,33 +961,36 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           </div>
       {/* Design panels */}
       {(showFonts || showDesign) && (
-        <div style={{ background:C.bgCard, borderBottom:`1px solid ${C.border}`, padding:"14px 20px", flexShrink:0 }}>
+        <div className="jv-panel-bar">
           {showFonts && (
             <div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Font</div>
-                <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
+              <div className="jv-panel-row-header">
+                <div className="jv-panel-title">Font</div>
+                <button className="jv-panel-done" onClick={closeToolbarPanel}>Done</button>
               </div>
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                {FONT_PRESETS.map(f => (
-                  <div key={f.value} onClick={()=>setCustomFont(f.value)} style={{ padding:"6px 12px", borderRadius:7, cursor:"pointer", transition:"all 0.15s", border:`2px solid ${(customFont||tmpl.font_family)===f.value?C.teal:C.border}`, background:(customFont||tmpl.font_family)===f.value?C.tealLight:C.bg }}>
-                    <div style={{ fontSize:13, fontFamily:f.value, fontWeight:600, color:C.navy }}>{f.label}</div>
-                    <div style={{ fontSize:10, color:C.textMuted }}>{f.category}</div>
-                  </div>
-                ))}
-                {customFont && <button onClick={()=>setCustomFont(null)} style={{ padding:"6px 12px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", fontSize:11, color:C.textMuted, cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                {FONT_PRESETS.map(f => {
+                  const isActive = (customFont||tmpl.font_family)===f.value;
+                  return (
+                    <div key={f.value} onClick={()=>setCustomFont(f.value)} className={`jv-chip${isActive?" jv-chip--active":""}`}>
+                      <div className="jv-chip__title" style={{ fontFamily:f.value }}>{f.label}</div>
+                      <div className="jv-chip__meta">{f.category}</div>
+                    </div>
+                  );
+                })}
+                {customFont && <button onClick={()=>setCustomFont(null)} className="jv-reset-link">Reset</button>}
               </div>
             </div>
           )}
           {showDesign && (
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Design &amp; Style</div>
-                <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
+              <div className="jv-panel-row-header" style={{ marginBottom:0 }}>
+                <div className="jv-panel-title">Design &amp; Style</div>
+                <button className="jv-panel-done" onClick={closeToolbarPanel}>Done</button>
               </div>
 
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Header Layout</div>
+                <div className="jv-panel-label">Header Layout</div>
                 <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                   {HEADER_LAYOUTS.map(h => {
                     const locked = h.tier==="premium" && !isPaid;
@@ -995,12 +998,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                     const disabled = locked || !implemented;
                     const isActive = hdrLayout===h.id;
                     return (
-                      <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }} style={{ padding:"8px 14px", borderRadius:8, cursor:disabled?"not-allowed":"pointer", transition:"all 0.15s", border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:disabled?"#F8FAFC":C.bg, opacity:disabled?0.6:1 }}>
+                      <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }} className={`jv-chip${isActive?" jv-chip--active":""}${disabled?" jv-chip--disabled":""}`}>
                         <div style={{ fontSize:18, marginBottom:3 }}>{h.icon}</div>
-                        <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{h.label}</div>
-                        {!implemented && <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Coming soon</div>}
-                        {locked && <div style={{ fontSize:10, color:C.gold, marginTop:2 }}>Pro</div>}
-                        {isActive && <div style={{ fontSize:10, color:C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
+                        <div className="jv-chip__title">{h.label}</div>
+                        {!implemented && <div className="jv-chip__meta">Coming soon</div>}
+                        {locked && <div className="jv-chip__meta" style={{ color:"var(--jv-color-gold-500)" }}>Pro</div>}
+                        {isActive && <div className="jv-chip__meta jv-chip__meta--active">Active</div>}
                       </div>
                     );
                   })}
@@ -1008,47 +1011,47 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               </div>
 
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Accent Color</div>
+                <div className="jv-panel-label">Accent Color</div>
                 <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
                   {ACCENT_COLOR_SWATCHES.map(c => (
-                    <button key={c} onClick={()=>setCustomAccent(c)} title={c} style={{ width:28, height:28, borderRadius:"50%", border:accent===c?`2px solid ${C.navy}`:`2px solid ${C.border}`, background:c, cursor:"pointer", padding:0 }} />
+                    <button key={c} onClick={()=>setCustomAccent(c)} title={c} className={`jv-swatch${accent===c?" jv-swatch--active":""}`} style={{ background:c }} />
                   ))}
-                  <input type="color" value={accent} onChange={e=>setCustomAccent(e.target.value)} title="Custom color" style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${C.border}`, cursor:"pointer", padding:0, background:"none" }} />
-                  {customAccent && <button onClick={()=>setCustomAccent(null)} style={{ padding:"5px 10px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", fontSize:11, color:C.textMuted, cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                  <input type="color" value={accent} onChange={e=>setCustomAccent(e.target.value)} title="Custom color" className="jv-swatch" style={{ background:"none" }} />
+                  {customAccent && <button onClick={()=>setCustomAccent(null)} className="jv-reset-link" style={{ border:"1px solid var(--jv-color-border)" }}>Reset</button>}
                 </div>
               </div>
 
               <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
                 <div>
-                  <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Font Size</div>
+                  <div className="jv-panel-label">Font Size</div>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <button onClick={()=>setCustomFontSize(Math.max(11, fontSize-1))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>−</button>
-                    <span style={{ fontSize:12, fontWeight:600, color:C.navy, minWidth:20, textAlign:"center" }}>{fontSize}</span>
-                    <button onClick={()=>setCustomFontSize(Math.min(16, fontSize+1))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>+</button>
-                    {customFontSize && <button onClick={()=>setCustomFontSize(null)} style={{ fontSize:11, color:C.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                    <button onClick={()=>setCustomFontSize(Math.max(11, fontSize-1))} className="jv-stepper-btn">−</button>
+                    <span className="jv-stepper-value">{fontSize}</span>
+                    <button onClick={()=>setCustomFontSize(Math.min(16, fontSize+1))} className="jv-stepper-btn">+</button>
+                    {customFontSize && <button onClick={()=>setCustomFontSize(null)} className="jv-reset-link">Reset</button>}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Line Height</div>
+                  <div className="jv-panel-label">Line Height</div>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <button onClick={()=>setCustomLineHeight(Math.max(1.3, Math.round((lineHeight-0.1)*10)/10))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>−</button>
-                    <span style={{ fontSize:12, fontWeight:600, color:C.navy, minWidth:28, textAlign:"center" }}>{lineHeight.toFixed(1)}</span>
-                    <button onClick={()=>setCustomLineHeight(Math.min(1.9, Math.round((lineHeight+0.1)*10)/10))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>+</button>
-                    {customLineHeight && <button onClick={()=>setCustomLineHeight(null)} style={{ fontSize:11, color:C.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                    <button onClick={()=>setCustomLineHeight(Math.max(1.3, Math.round((lineHeight-0.1)*10)/10))} className="jv-stepper-btn">−</button>
+                    <span className="jv-stepper-value" style={{ minWidth:28 }}>{lineHeight.toFixed(1)}</span>
+                    <button onClick={()=>setCustomLineHeight(Math.min(1.9, Math.round((lineHeight+0.1)*10)/10))} className="jv-stepper-btn">+</button>
+                    {customLineHeight && <button onClick={()=>setCustomLineHeight(null)} className="jv-reset-link">Reset</button>}
                   </div>
                 </div>
               </div>
 
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Section Spacing</div>
+                <div className="jv-panel-label">Section Spacing</div>
                 <div style={{ display:"flex", gap:6 }}>
                   {["compact","normal","spacious"].map(sp => {
                     const isActive = (customSpacing || tmpl.section_spacing || "normal") === sp;
                     return (
-                      <button key={sp} onClick={()=>setCustomSpacing(sp)} style={{ padding:"6px 14px", borderRadius:7, border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:C.bg, fontSize:12, fontWeight:600, color:isActive?C.tealDark:C.slate, cursor:"pointer", fontFamily:"inherit", textTransform:"capitalize" }}>{sp}</button>
+                      <button key={sp} onClick={()=>setCustomSpacing(sp)} className={`jv-pill-option${isActive?" jv-pill-option--active":""}`}>{sp}</button>
                     );
                   })}
-                  {customSpacing && <button onClick={()=>setCustomSpacing(null)} style={{ fontSize:11, color:C.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", marginLeft:4 }}>Reset</button>}
+                  {customSpacing && <button onClick={()=>setCustomSpacing(null)} className="jv-reset-link" style={{ marginLeft:4 }}>Reset</button>}
                 </div>
               </div>
             </div>
