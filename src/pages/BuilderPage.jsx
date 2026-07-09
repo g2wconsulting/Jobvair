@@ -7,6 +7,7 @@ import { normalizeResumeTemplate } from "../resume-templates/normalizeResumeTemp
 import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx";
 import { SectionHeadingRenderer } from "../resume-templates/renderers/SectionHeadingRenderer.jsx";
 import { findResumeTemplateBySlug, getPersistableTemplateId, mergeResumeTemplates } from "../resume-templates/templateRegistry.js";
+import { RESUME_TEMPLATE_CATEGORIES } from "../resume-templates/categories.js";
 import { VisualDesigner } from "../resume-designer/components/VisualDesigner.jsx";
 import AssistantPanel from "../assistant/AssistantPanel.jsx";
 
@@ -940,15 +941,36 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
                 <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Choose Template</div>
                 <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
               </div>
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                {templates.map(t => (
-                  <div key={t.id} onClick={()=>setSelectedTmpl(t)} style={{ padding:"8px 12px", borderRadius:8, cursor:"pointer", transition:"all 0.15s", border:`2px solid ${selectedTmpl?.id===t.id?t.accent_color||C.teal:C.border}`, borderLeft:`4px solid ${t.accent_color||C.teal}`, background:selectedTmpl?.id===t.id?`${t.accent_color||C.teal}11`:C.bg }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{t.name}</div>
-                    <div style={{ fontSize:10, color:C.textMuted, marginTop:1 }}>{t.tier==="free"?"Free":"Pro"}</div>
-                    {selectedTmpl?.id===t.id && <div style={{ fontSize:10, color:t.accent_color||C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
+              {(() => {
+                const byCategory = new Map();
+                templates.forEach(t => {
+                  const key = t.category || "other";
+                  if (!byCategory.has(key)) byCategory.set(key, []);
+                  byCategory.get(key).push(t);
+                });
+                const orderedGroups = [
+                  ...RESUME_TEMPLATE_CATEGORIES.map(cat => [cat, byCategory.get(cat.id) || []]),
+                  ...(byCategory.has("other") ? [[{ id:"other", label:"Other" }, byCategory.get("other")]] : []),
+                ].filter(([, list]) => list.length);
+
+                return orderedGroups.map(([cat, list]) => (
+                  <div key={cat.id} style={{ marginBottom:14 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>{cat.label}</div>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      {list.map(t => (
+                        <div key={t.id} onClick={()=>setSelectedTmpl(t)} title={t.description||""} style={{ padding:"8px 12px", borderRadius:8, cursor:"pointer", transition:"all 0.15s", border:`2px solid ${selectedTmpl?.id===t.id?t.accent_color||C.teal:C.border}`, borderLeft:`4px solid ${t.accent_color||C.teal}`, background:selectedTmpl?.id===t.id?`${t.accent_color||C.teal}11`:C.bg, minWidth:130 }}>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{t.name}</div>
+                          <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:1 }}>
+                            <span style={{ fontSize:10, color:C.textMuted }}>{t.tier==="free"?"Free":"Pro"}</span>
+                            {t.ats_friendly && <span style={{ fontSize:9, color:C.success, fontWeight:700 }}>ATS ✓</span>}
+                          </div>
+                          {selectedTmpl?.id===t.id && <div style={{ fontSize:10, color:t.accent_color||C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                ));
+              })()}
             </div>
           )}
           {showFonts && (

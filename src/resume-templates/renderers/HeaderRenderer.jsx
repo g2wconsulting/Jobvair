@@ -115,6 +115,27 @@
     </div>
   );
 
+  if (headerTreatment === "corporate_classic") return (
+    <div style={{ textAlign:align, paddingBottom:12, marginBottom:16, borderBottom:`2px solid ${effectiveAccent}`, ...baseInteractive }}
+      onClick={!editing ? onOpenHeaderPanel : undefined}>
+      {inner}
+    </div>
+  );
+
+  if (headerTreatment === "ats_plain") return (
+    <div style={{ textAlign:"left", paddingBottom:8, marginBottom:10, borderBottom:"1px solid #000000", ...baseInteractive }}
+      onClick={!editing ? onOpenHeaderPanel : undefined}>
+      {inner}
+    </div>
+  );
+
+  if (headerTreatment === "creative_bold") return (
+    <div style={{ textAlign:align, padding:"0 0 16px 18px", marginBottom:18, borderLeft:`8px solid ${effectiveAccent}`, ...baseInteractive }}
+      onClick={!editing ? onOpenHeaderPanel : undefined}>
+      {inner}
+    </div>
+  );
+
   return (
     <div style={{ textAlign:align, paddingBottom:14, marginBottom:14, borderBottom:`3px solid ${effectiveAccent}`, ...baseInteractive }}
       onClick={!editing ? onOpenHeaderPanel : undefined}>

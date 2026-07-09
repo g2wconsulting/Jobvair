@@ -30,6 +30,16 @@ export const RESUME_TEMPLATE_CATEGORIES = [
     description: "Early-career templates that emphasize education, projects, and potential.",
   },
   {
+    id: "ats-friendly",
+    label: "ATS Friendly",
+    description: "Maximum-compatibility templates built to parse cleanly through applicant tracking systems.",
+  },
+  {
+    id: "creative",
+    label: "Creative / Portfolio",
+    description: "Expressive templates for design, marketing, media, and portfolio-forward roles.",
+  },
+  {
     id: "ai-recommended",
     label: "AI Recommended",
     description: "Templates recommended by Jobvair for a candidate profile or job target.",

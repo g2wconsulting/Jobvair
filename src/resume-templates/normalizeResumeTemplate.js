@@ -2,15 +2,23 @@ import { createDefaultResumeTemplateConfig, RESUME_TEMPLATE_VERSION } from "./te
 
 function parseConfig(templateRow) {
   const raw = templateRow?.template_config_json || templateRow?.config_json || templateRow?.config;
-  if (!raw) return {};
-  if (typeof raw === "object") return raw;
-  if (typeof raw !== "string") return {};
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
+  if (raw) {
+    if (typeof raw === "object") return raw;
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return {};
+      }
+    }
   }
+  // Local presets (and any already-expanded config) carry colors/typography/
+  // layout/visual_style directly as top-level keys rather than nested under a
+  // config blob column. Treat the row itself as the config source in that case.
+  if (templateRow && (templateRow.colors || templateRow.typography || templateRow.layout || templateRow.visual_style)) {
+    return templateRow;
+  }
+  return {};
 }
 
 function normalizeCollections(templateRow, config) {

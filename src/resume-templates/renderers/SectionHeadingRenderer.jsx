@@ -50,6 +50,30 @@
     );
   }
 
+  if (treatment === "corporate_underline") {
+    return (
+      <div style={{ marginBottom:9, paddingBottom:4, borderBottom:`2px solid ${effectiveAccent}` }}>
+        <div style={{ fontSize:effectiveFontSize, fontWeight:700, color:"#1E293B", textTransform:"uppercase", letterSpacing:"0.06em" }}>{label}</div>
+      </div>
+    );
+  }
+
+  if (treatment === "ats_plain") {
+    return (
+      <div style={{ marginBottom:6 }}>
+        <div style={{ fontSize:effectiveFontSize, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.02em" }}>{label}</div>
+      </div>
+    );
+  }
+
+  if (treatment === "creative_tab") {
+    return (
+      <div style={{ display:"inline-flex", alignItems:"center", marginBottom:10, padding:"3px 12px", background:effectiveAccent, borderRadius:"4px 12px 4px 12px" }}>
+        <div style={{ fontSize:effectiveFontSize-1, fontWeight:800, color:"#fff", textTransform:"uppercase", letterSpacing:"0.06em" }}>{label}</div>
+      </div>
+    );
+  }
+
   if (mode === "document") {
     const base = { margin: "0 0 8px", fontSize: effectiveFontSize - 1, fontWeight: 700, color: effectiveAccent, textTransform: "uppercase", letterSpacing: "0.08em" };
     if (headingStyle === "underlined") return <h2 style={{ ...base, textTransform:"none", fontSize: effectiveFontSize + 1, borderBottom: `2px solid ${effectiveAccent}`, paddingBottom: 4 }}>{label}</h2>;
