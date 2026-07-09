@@ -1,0 +1,306 @@
+@import "../components/ui/theme.css";
+
+.jv-sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: var(--jv-gradient-brand);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  transition: width var(--jv-duration-base) var(--jv-ease-standard);
+  font-family: var(--jv-font-sans);
+}
+
+.jv-sidebar--collapsed {
+  width: 64px;
+}
+
+.jv-sidebar__brand {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.jv-sidebar__logo {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--jv-radius-sm);
+  background: var(--jv-gradient-primary);
+  box-shadow: var(--jv-shadow-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.jv-sidebar__name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.jv-sidebar__nav {
+  flex: 1;
+  padding: var(--jv-space-3) var(--jv-space-2);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jv-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--jv-radius-sm);
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--jv-duration-fast) ease, color var(--jv-duration-fast) ease, transform var(--jv-duration-fast) ease;
+}
+
+.jv-nav-item:hover:not(.jv-nav-item--active) {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.92);
+  transform: translateX(2px);
+}
+
+.jv-nav-item--active {
+  background: rgba(0, 191, 165, 0.18);
+  border-left-color: var(--jv-color-teal-400);
+  color: var(--jv-color-teal-400);
+  font-weight: 700;
+}
+
+.jv-nav-item__icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.jv-nav-item__label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jv-sidebar__upsell {
+  margin: 0 8px 8px;
+  padding: 14px;
+  border-radius: var(--jv-radius-md);
+  background: rgba(0, 191, 165, 0.12);
+  border: 1px solid rgba(0, 191, 165, 0.22);
+}
+
+.jv-sidebar__upsell-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--jv-color-gold-500);
+  margin-bottom: 4px;
+}
+
+.jv-sidebar__upsell-copy {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 8px;
+}
+
+.jv-sidebar__upsell-bar {
+  height: 4px;
+  border-radius: var(--jv-radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.jv-sidebar__upsell-bar span {
+  display: block;
+  height: 100%;
+  background: var(--jv-gradient-primary);
+  border-radius: var(--jv-radius-pill);
+}
+
+.jv-sidebar__upsell-link {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--jv-color-teal-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.jv-sidebar__footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: var(--jv-space-2);
+  position: relative;
+}
+
+.jv-sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--jv-radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--jv-duration-fast) ease;
+}
+
+.jv-sidebar__user:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.jv-sidebar__user-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.jv-sidebar__user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jv-sidebar__user-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 1px 0 0;
+}
+
+.jv-sidebar__user-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 8px;
+  right: 8px;
+  background: var(--jv-color-surface);
+  border-radius: var(--jv-radius-md);
+  box-shadow: var(--jv-shadow-lg);
+  padding: 4px;
+  z-index: 50;
+}
+
+.jv-sidebar__user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--jv-radius-xs);
+  border: none;
+  background: transparent;
+  color: var(--jv-color-heading);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.jv-sidebar__user-menu-item:hover {
+  background: var(--jv-color-slate-50);
+}
+
+.jv-sidebar__user-menu-item--danger {
+  color: var(--jv-color-danger-600);
+}
+
+.jv-sidebar__user-menu-divider {
+  height: 1px;
+  background: var(--jv-color-slate-100);
+  margin: 4px 0;
+}
+
+.jv-sidebar__collapse {
+  position: absolute;
+  top: 22px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--jv-gradient-primary);
+  box-shadow: var(--jv-shadow-glow);
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Shared top bar (App.jsx) */
+.jv-topbar {
+  height: 64px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--jv-color-border);
+  box-shadow: var(--jv-shadow-xs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.jv-topbar__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--jv-color-heading);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.jv-topbar__subtitle {
+  font-size: 11.5px;
+  color: var(--jv-color-muted);
+  margin: 1px 0 0;
+}
+
+.jv-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jv-topbar__bell {
+  position: relative;
+}
+
+.jv-topbar__bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  background: var(--jv-color-danger-600);
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+}

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { useProfile } from "./useProfile";
+import { Bell, ShieldCheck } from "lucide-react";
 import { C, EMPTY_USER, NAV } from "./constants/appConstants.js";
-import { Avatar, Badge } from "./components/ui.jsx";
+import { Avatar } from "./components/ui.jsx";
+import { Badge } from "./components/ui/index.js";
 import Sidebar from "./components/Sidebar.jsx";
 import AuthScreen from "./pages/AuthScreen.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
@@ -203,16 +205,20 @@ export default function App() {
   return (
     <div className="jobvair-app-shell" style={{ display:"flex", minHeight:"100vh", background:C.bg, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <Sidebar active={page} onNav={setPage} user={user} collapsed={collapsed} onCollapse={()=>setCollapsed(c=>!c)} />
+      <Sidebar active={page} onNav={setPage} user={user} collapsed={collapsed} onCollapse={()=>setCollapsed(c=>!c)} onLogout={handleLogout} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
-        <div style={{ height:64, background:"rgba(255,255,255,0.85)", backdropFilter:"blur(8px)", borderBottom:`1px solid ${C.border}`, boxShadow:"0 1px 3px rgba(13,27,42,0.04)", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 28px", flexShrink:0, position:"sticky", top:0, zIndex:20 }}>
-          <div style={{ fontSize:15, color:C.textMuted, display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:16 }}>{NAV.find(n=>n.id===page)?.icon}</span>
-            <span style={{ color:C.navy, fontWeight:700, fontSize:16, letterSpacing:"-0.01em" }}>{NAV.find(n=>n.id===page)?.label || "Dashboard"}</span>
+        <div className="jv-topbar">
+          <div>
+            <h1 className="jv-topbar__title">{NAV.find(n=>n.id===page)?.label || "Dashboard"}</h1>
+            <p className="jv-topbar__subtitle">{new Date().toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric", year:"numeric" })}</p>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            {user?.idVerified && <Badge color="teal" small>🛡 Verified</Badge>}
-            <Badge color="gray" small>{user?.subscription==="free"?"Free Plan":"Premium"}</Badge>
+          <div className="jv-topbar__actions">
+            {user?.idVerified && <Badge tone="success" icon={ShieldCheck}>Verified</Badge>}
+            <Badge tone={user?.subscription==="free"?"neutral":"warning"}>{user?.subscription==="free"?"Free Plan":"Premium"}</Badge>
+            <button className="jv-topbar__bell" style={{ background:"none", border:"none", cursor:"pointer", color:C.textMuted, padding:8 }}>
+              <Bell size={17} />
+              <span className="jv-topbar__bell-dot" />
+            </button>
             <Avatar name={user?.name} size={32} />
           </div>
         </div>
