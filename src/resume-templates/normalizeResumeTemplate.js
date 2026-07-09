@@ -80,6 +80,7 @@ export function normalizeResumeTemplate(templateRow = null) {
     ...normalized,
     font_family: normalized.typography.font_family,
     base_font_size: normalized.typography.base_font_size,
+    line_height: normalized.typography.line_height,
     heading_style: normalized.typography.heading_style,
     header_style: normalized.layout.header.style,
     layout_type: normalized.layout.body.layout_type,

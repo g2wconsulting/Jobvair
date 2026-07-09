@@ -7,9 +7,14 @@ import { normalizeResumeTemplate } from "../resume-templates/normalizeResumeTemp
 import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx";
 import { SectionHeadingRenderer } from "../resume-templates/renderers/SectionHeadingRenderer.jsx";
 import { findResumeTemplateBySlug, getPersistableTemplateId, mergeResumeTemplates } from "../resume-templates/templateRegistry.js";
-import { RESUME_TEMPLATE_CATEGORIES } from "../resume-templates/categories.js";
+import TemplateGalleryModal from "../resume-templates/TemplateGalleryModal.jsx";
 import { VisualDesigner } from "../resume-designer/components/VisualDesigner.jsx";
 import AssistantPanel from "../assistant/AssistantPanel.jsx";
+
+const ACCENT_COLOR_SWATCHES = [
+  "#00BFA5", "#0B1F33", "#2563EB", "#0F766E", "#111827",
+  "#7C3AED", "#1D4ED8", "#DB2777", "#DC2626", "#059669", "#EA580C",
+];
 
 export default function BuilderPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
   const profile = profileForm || EMPTY_USER;
@@ -29,6 +34,10 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [selectedTmpl,   setSelectedTmpl]    = useState(null);
   const [customFont,     setCustomFont]      = useState(null); // overrides template font
   const [headerLayout,   setHeaderLayout]    = useState(null); // overrides template header_style
+  const [customAccent,   setCustomAccent]    = useState(null); // overrides template accent_color
+  const [customFontSize, setCustomFontSize]  = useState(null); // overrides template base_font_size
+  const [customLineHeight, setCustomLineHeight] = useState(null); // overrides template typography.line_height
+  const [customSpacing,  setCustomSpacing]   = useState(null); // overrides template section_spacing
   const [activeSection,  setActiveSection]   = useState(null);
   const [activeJobId,    setActiveJobId]     = useState(null);
   const [inspectorOpen,  setInspectorOpen]   = useState(false);
@@ -46,6 +55,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [builderMode,    setBuilderMode]     = useState("structured");
   const [measuredHeights, setMeasuredHeights] = useState({});
   const [assistantOpen,  setAssistantOpen]   = useState(false);
+  const [galleryOpen,    setGalleryOpen]     = useState(false);
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
   const structuredHeaderRef = useRef(null);
@@ -53,20 +63,20 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
   // Derived template values
   const tmpl = selectedTmpl || normalizeResumeTemplate({ slug:"modern", name:"Modern", accent_color:C.teal });
-  const accent     = tmpl.accent_color || C.teal;
+  const accent     = customAccent || tmpl.accent_color || C.teal;
   const fontFamily = customFont || tmpl.font_family || "DM Sans, sans-serif";
   const hdrLayout  = headerLayout || tmpl.header_style || "left";
   const effectiveHdrLayout = hdrLayout === "sidebar" ? "left" : hdrLayout;
   const isHeaderLayoutImplemented = id => id !== "sidebar";
-  const fontSize   = tmpl.base_font_size || 13;
-  const sGap       = { compact:10, normal:18, spacious:28 }[tmpl.section_spacing] || 18;
+  const fontSize   = customFontSize || tmpl.base_font_size || 13;
+  const lineHeight = customLineHeight || tmpl.line_height || 1.6;
+  const sGap       = { compact:10, normal:18, spacious:28 }[customSpacing || tmpl.section_spacing] || 18;
   const margins    = tmpl.page_margin === "tight" ? "32px 40px" : tmpl.page_margin === "wide" ? "52px 72px" : "44px 56px";
   const structuredPageWidth = 980;
   const structuredPageHeight = Math.round(structuredPageWidth * 11 / 8.5);
   const structuredMarginY = Number.parseInt(margins, 10) || 44;
   const structuredContentHeight = structuredPageHeight - structuredMarginY * 2;
   const showHeaderPanel = activeToolbarPanel === "header";
-  const showTemplates = activeToolbarPanel === "templates";
   const showFonts = activeToolbarPanel === "fonts";
   const showDesign = activeToolbarPanel === "design";
   const openToolbarPanel = panel => setActiveToolbarPanel(panel);
@@ -185,10 +195,14 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             setSections(secs);
             const nameSection = secs.find(s => s.section_type === "name");
             setHeaderConfig(normalizeHeaderConfig(nameSection?.content));
-            // Restore custom font and header layout from layout_config
+            // Restore custom font, header layout, and other style overrides from layout_config
             const layoutCfg = secs.find(s => s.section_type === "name")?.layout_config_json || {};
             if (layoutCfg.custom_font)   setCustomFont(layoutCfg.custom_font);
             if (layoutCfg.header_layout) setHeaderLayout(layoutCfg.header_layout);
+            if (layoutCfg.custom_accent) setCustomAccent(layoutCfg.custom_accent);
+            if (layoutCfg.custom_font_size) setCustomFontSize(layoutCfg.custom_font_size);
+            if (layoutCfg.custom_line_height) setCustomLineHeight(layoutCfg.custom_line_height);
+            if (layoutCfg.custom_spacing) setCustomSpacing(layoutCfg.custom_spacing);
           } else {
             setSections(buildDefaultSections());
             setHeaderConfig(defaultHeaderConfig());
@@ -315,7 +329,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         resume_id:    rid, user_id:user.id, section_type:s.section_type, label:s.label,
         content:      s.section_type === "name" ? savedHeaderConfig : (s.content || {}),
         display_order:s.display_order, is_visible:s.is_visible, is_required:s.is_required||false,
-        layout_config_json: s.section_type === "name" ? { custom_font:customFont, header_layout:headerLayout } : (s.layout_config_json||{}),
+        layout_config_json: s.section_type === "name" ? { custom_font:customFont, header_layout:headerLayout, custom_accent:customAccent, custom_font_size:customFontSize, custom_line_height:customLineHeight, custom_spacing:customSpacing } : (s.layout_config_json||{}),
       }));
       await supabase.from("resume_sections").delete().eq("resume_id", rid);
       if (allSections.length) await supabase.from("resume_sections").insert(allSections);
@@ -699,7 +713,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         </div>
       </div>
       <div style={{ display:"flex", justifyContent:"center", background:"#E2E8F0", padding:"32px 24px", borderRadius:12, minHeight:800 }}>
-        <div ref={previewRef} style={{ width:900, maxWidth:"calc(100vw - 80px)", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.18)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight:1.6 }}>
+        <div ref={previewRef} style={{ width:900, maxWidth:"calc(100vw - 80px)", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.18)", fontFamily, fontSize, color:"#1E293B", padding:margins, boxSizing:"border-box", lineHeight }}>
           {renderResumeHeader(false)}
           {sorted.filter(s => s.is_visible && s.section_type !== "name").map(s => (
             <div key={s.section_type||s.id} style={{ marginBottom:sGap }}>
@@ -873,7 +887,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           <div style={{ display:"flex", gap:4, alignItems:"center" }}>
             {[
               ["Document", showDocumentSettings, !activeSection && !activeToolbarPanel],
-              ["Template", () => openToolbarPanel("templates"), showTemplates],
+              ["Template", () => setGalleryOpen(true), false],
               ["Header",   () => selectSection("name", "header"), showHeaderPanel],
               ["Font",     () => openToolbarPanel("fonts"), showFonts],
               ["Design",   () => openToolbarPanel("design"), showDesign],
@@ -925,6 +939,15 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         />
       )}
 
+      {galleryOpen && (
+        <TemplateGalleryModal
+          templates={templates}
+          selectedTmpl={selectedTmpl}
+          onSelect={(t) => { setSelectedTmpl(t); setGalleryOpen(false); }}
+          onClose={() => setGalleryOpen(false)}
+        />
+      )}
+
       {builderMode === "visual" ? (
         <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} />
       ) : (
@@ -933,46 +956,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             Structured Resume Builder is recommended. Best for editing resume content and exporting.
           </div>
       {/* Design panels */}
-      {(showTemplates || showFonts || showDesign) && (
+      {(showFonts || showDesign) && (
         <div style={{ background:C.bgCard, borderBottom:`1px solid ${C.border}`, padding:"14px 20px", flexShrink:0 }}>
-          {showTemplates && (
-            <div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Choose Template</div>
-                <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
-              </div>
-              {(() => {
-                const byCategory = new Map();
-                templates.forEach(t => {
-                  const key = t.category || "other";
-                  if (!byCategory.has(key)) byCategory.set(key, []);
-                  byCategory.get(key).push(t);
-                });
-                const orderedGroups = [
-                  ...RESUME_TEMPLATE_CATEGORIES.map(cat => [cat, byCategory.get(cat.id) || []]),
-                  ...(byCategory.has("other") ? [[{ id:"other", label:"Other" }, byCategory.get("other")]] : []),
-                ].filter(([, list]) => list.length);
-
-                return orderedGroups.map(([cat, list]) => (
-                  <div key={cat.id} style={{ marginBottom:14 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>{cat.label}</div>
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                      {list.map(t => (
-                        <div key={t.id} onClick={()=>setSelectedTmpl(t)} title={t.description||""} style={{ padding:"8px 12px", borderRadius:8, cursor:"pointer", transition:"all 0.15s", border:`2px solid ${selectedTmpl?.id===t.id?t.accent_color||C.teal:C.border}`, borderLeft:`4px solid ${t.accent_color||C.teal}`, background:selectedTmpl?.id===t.id?`${t.accent_color||C.teal}11`:C.bg, minWidth:130 }}>
-                          <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{t.name}</div>
-                          <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:1 }}>
-                            <span style={{ fontSize:10, color:C.textMuted }}>{t.tier==="free"?"Free":"Pro"}</span>
-                            {t.ats_friendly && <span style={{ fontSize:9, color:C.success, fontWeight:700 }}>ATS ✓</span>}
-                          </div>
-                          {selectedTmpl?.id===t.id && <div style={{ fontSize:10, color:t.accent_color||C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          )}
           {showFonts && (
             <div>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
@@ -991,27 +976,76 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             </div>
           )}
           {showDesign && (
-            <div>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Header Layout</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>Design &amp; Style</div>
                 <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
               </div>
-              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                {HEADER_LAYOUTS.map(h => {
-                  const locked = h.tier==="premium" && !isPaid;
-                  const implemented = isHeaderLayoutImplemented(h.id);
-                  const disabled = locked || !implemented;
-                  const isActive = hdrLayout===h.id;
-                  return (
-                    <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }} style={{ padding:"8px 14px", borderRadius:8, cursor:disabled?"not-allowed":"pointer", transition:"all 0.15s", border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:disabled?"#F8FAFC":C.bg, opacity:disabled?0.6:1 }}>
-                      <div style={{ fontSize:18, marginBottom:3 }}>{h.icon}</div>
-                      <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{h.label}</div>
-                      {!implemented && <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Coming soon</div>}
-                      {locked && <div style={{ fontSize:10, color:C.gold, marginTop:2 }}>Pro</div>}
-                      {isActive && <div style={{ fontSize:10, color:C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
-                    </div>
-                  );
-                })}
+
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Header Layout</div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                  {HEADER_LAYOUTS.map(h => {
+                    const locked = h.tier==="premium" && !isPaid;
+                    const implemented = isHeaderLayoutImplemented(h.id);
+                    const disabled = locked || !implemented;
+                    const isActive = hdrLayout===h.id;
+                    return (
+                      <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }} style={{ padding:"8px 14px", borderRadius:8, cursor:disabled?"not-allowed":"pointer", transition:"all 0.15s", border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:disabled?"#F8FAFC":C.bg, opacity:disabled?0.6:1 }}>
+                        <div style={{ fontSize:18, marginBottom:3 }}>{h.icon}</div>
+                        <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{h.label}</div>
+                        {!implemented && <div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>Coming soon</div>}
+                        {locked && <div style={{ fontSize:10, color:C.gold, marginTop:2 }}>Pro</div>}
+                        {isActive && <div style={{ fontSize:10, color:C.teal, fontWeight:700, marginTop:2 }}>Active</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Accent Color</div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+                  {ACCENT_COLOR_SWATCHES.map(c => (
+                    <button key={c} onClick={()=>setCustomAccent(c)} title={c} style={{ width:28, height:28, borderRadius:"50%", border:accent===c?`2px solid ${C.navy}`:`2px solid ${C.border}`, background:c, cursor:"pointer", padding:0 }} />
+                  ))}
+                  <input type="color" value={accent} onChange={e=>setCustomAccent(e.target.value)} title="Custom color" style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${C.border}`, cursor:"pointer", padding:0, background:"none" }} />
+                  {customAccent && <button onClick={()=>setCustomAccent(null)} style={{ padding:"5px 10px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", fontSize:11, color:C.textMuted, cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                </div>
+              </div>
+
+              <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Font Size</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <button onClick={()=>setCustomFontSize(Math.max(11, fontSize-1))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>−</button>
+                    <span style={{ fontSize:12, fontWeight:600, color:C.navy, minWidth:20, textAlign:"center" }}>{fontSize}</span>
+                    <button onClick={()=>setCustomFontSize(Math.min(16, fontSize+1))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>+</button>
+                    {customFontSize && <button onClick={()=>setCustomFontSize(null)} style={{ fontSize:11, color:C.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Line Height</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <button onClick={()=>setCustomLineHeight(Math.max(1.3, Math.round((lineHeight-0.1)*10)/10))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>−</button>
+                    <span style={{ fontSize:12, fontWeight:600, color:C.navy, minWidth:28, textAlign:"center" }}>{lineHeight.toFixed(1)}</span>
+                    <button onClick={()=>setCustomLineHeight(Math.min(1.9, Math.round((lineHeight+0.1)*10)/10))} style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:C.navy }}>+</button>
+                    {customLineHeight && <button onClick={()=>setCustomLineHeight(null)} style={{ fontSize:11, color:C.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>Reset</button>}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:"0.04em" }}>Section Spacing</div>
+                <div style={{ display:"flex", gap:6 }}>
+                  {["compact","normal","spacious"].map(sp => {
+                    const isActive = (customSpacing || tmpl.section_spacing || "normal") === sp;
+                    return (
+                      <button key={sp} onClick={()=>setCustomSpacing(sp)} style={{ padding:"6px 14px", borderRadius:7, border:`2px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:C.bg, fontSize:12, fontWeight:600, color:isActive?C.tealDark:C.slate, cursor:"pointer", fontFamily:"inherit", textTransform:"capitalize" }}>{sp}</button>
+                    );
+                  })}
+                  {customSpacing && <button onClick={()=>setCustomSpacing(null)} style={{ fontSize:11, color:C.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", marginLeft:4 }}>Reset</button>}
+                </div>
               </div>
             </div>
           )}
@@ -1073,7 +1107,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, letterSpacing:"0.04em", textAlign:"center" }}>
             Drag sections to reorder - Click to edit
           </div>
-          <div ref={previewRef} style={{ width:structuredPageWidth, maxWidth:"100%", flexShrink:1, display:"flex", flexDirection:"column", gap:28, fontFamily, fontSize, color:"#1E293B", lineHeight:1.6, overflowWrap:"break-word", wordBreak:"break-word" }}>
+          <div ref={previewRef} style={{ width:structuredPageWidth, maxWidth:"100%", flexShrink:1, display:"flex", flexDirection:"column", gap:28, fontFamily, fontSize, color:"#1E293B", lineHeight, overflowWrap:"break-word", wordBreak:"break-word" }}>
             {structuredPageGroups.map((pageSectionIds, pageIndex) => (
               <div key={pageIndex} className={pageIndex < structuredPageGroups.length - 1 ? "jobvair-pdf-page" : undefined} style={{ position:"relative", width:"100%", minHeight:structuredPageHeight, overflow:"visible", background:"#fff", boxShadow:"0 8px 48px rgba(0,0,0,0.15)", padding:margins, boxSizing:"border-box" }}>
                 <div style={{ position:"absolute", bottom:14, right:18, fontSize:10, color:"#CBD5E1", fontWeight:700, letterSpacing:"0.08em" }}>Page {pageIndex + 1}</div>
