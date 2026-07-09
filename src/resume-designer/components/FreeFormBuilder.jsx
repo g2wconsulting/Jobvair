@@ -300,11 +300,12 @@ const FreeFormBuilder = forwardRef(function FreeFormBuilder({ resumeId, userId, 
 
   const [loading, setLoading] = useState(Boolean(resumeId));
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
+  const [saveError, setSaveError] = useState(null);
   const loadedResumeIdRef = useRef(null);
   const skipNextAutosaveRef = useRef(false); // only set true right after hydrating from the server, so we don't immediately re-save what we just loaded
   const autosaveTimerRef = useRef(null);
 
-  useEffect(() => { onSaveStateChange?.(saveState); }, [saveState, onSaveStateChange]);
+  useEffect(() => { onSaveStateChange?.(saveState, saveError); }, [saveState, saveError, onSaveStateChange]);
 
   // ── Load the saved Free Build design for this resume, if any ─────────────
   useEffect(() => {
@@ -335,12 +336,13 @@ const FreeFormBuilder = forwardRef(function FreeFormBuilder({ resumeId, userId, 
 
   const persist = async (elementsToSave) => {
     setSaveState("saving");
+    setSaveError(null);
     try {
       let rid = resumeId;
       if (!rid) {
         rid = await onEnsureResumeId?.();
       }
-      if (!rid) throw new Error("No resume to save to yet");
+      if (!rid) throw new Error("No resume to save to yet — try clicking Save in Templates mode first.");
       const { error } = await supabase
         .from("resumes")
         .update({ freeform_design_json: { version: FREEFORM_DESIGN_VERSION, elements: elementsToSave } })
@@ -350,9 +352,9 @@ const FreeFormBuilder = forwardRef(function FreeFormBuilder({ resumeId, userId, 
       setSaveState("saved");
       setTimeout(() => setSaveState(s => (s === "saved" ? "idle" : s)), 2000);
     } catch (err) {
-      console.error("[FreeFormBuilder] save error:", err.message);
+      console.error("[FreeFormBuilder] save error:", err);
+      setSaveError(err.message || "Unknown error");
       setSaveState("error");
-      setTimeout(() => setSaveState(s => (s === "error" ? "idle" : s)), 3000);
     }
   };
 

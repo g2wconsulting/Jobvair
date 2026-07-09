@@ -59,6 +59,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [assistantOpen,  setAssistantOpen]   = useState(false);
   const [galleryOpen,    setGalleryOpen]     = useState(false);
   const [freeformSaveState, setFreeformSaveState] = useState("idle");
+  const [freeformSaveError, setFreeformSaveError] = useState(null);
   const freeformRef = useRef(null);
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
@@ -918,7 +919,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         ) : (
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
             {freeformSaveState==="saved" && <span className="jv-save-indicator jv-save-indicator--saved"><CheckCircle2 size={13} /> Saved</span>}
-            {freeformSaveState==="error" && <span className="jv-save-indicator jv-save-indicator--error"><AlertCircle size={13} /> Save failed</span>}
+            {freeformSaveState==="error" && <span className="jv-save-indicator jv-save-indicator--error" title={freeformSaveError||""}><AlertCircle size={13} /> {freeformSaveError||"Save failed"}</span>}
             <button className="jv-toolbar-action jv-toolbar-action--primary" disabled={freeformSaveState==="saving"} onClick={()=>freeformRef.current?.saveNow()}>
               <Save size={14} /> {freeformSaveState==="saving"?"Saving...":"Save"}
             </button>
@@ -961,7 +962,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       )}
 
       {builderMode === "visual" ? (
-        <FreeFormBuilder ref={freeformRef} resumeId={resumeId} userId={user?.id} onEnsureResumeId={saveResume} onSaveStateChange={setFreeformSaveState} />
+        <FreeFormBuilder ref={freeformRef} resumeId={resumeId} userId={user?.id} onEnsureResumeId={saveResume} onSaveStateChange={(state, error)=>{ setFreeformSaveState(state); setFreeformSaveError(error||null); }} />
       ) : (
         <>
           <div style={{ flexShrink:0, padding:"8px 20px", background:"#F8FAFC", borderBottom:`1px solid ${C.border}`, color:C.textMuted, fontSize:12, fontWeight:600 }}>
