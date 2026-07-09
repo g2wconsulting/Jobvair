@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createBlock, createDefaultDesign } from "../designDefaults.js";
+import FreeFormBuilder from "./FreeFormBuilder.jsx";
 
 const C = {
   navy: "#0F172A",
@@ -265,6 +266,7 @@ function Inspector({ block, onStyleChange, onTextChange }) {
 }
 
 export function VisualDesigner({ headerConfig, sections, jobEntries }) {
+  const [designerTab, setDesignerTab] = useState("templates"); // "templates" | "free_build"
   const [design, setDesign] = useState(() => createDefaultDesign({ header: headerConfig, sections: sections || [], jobs: jobEntries || [] }));
   const [selectedBlockId, setSelectedBlockId] = useState("profile_name_1");
   const [zoom, setZoom] = useState(0.72);
@@ -353,6 +355,20 @@ export function VisualDesigner({ headerConfig, sections, jobEntries }) {
   };
 
   return (
+    <div style={{ display:"flex", flexDirection:"column", flex:1, minWidth:0, maxWidth:"100%", overflow:"hidden" }}>
+      <div style={{ display:"flex", gap:4, padding:"10px 16px", background:"#fff", borderBottom:`1px solid ${C.light}`, flexShrink:0 }}>
+        {[["templates","Templates"],["free_build","Free Build"]].map(([id,label]) => (
+          <button key={id} onClick={()=>setDesignerTab(id)} style={{
+            border:`1px solid ${designerTab===id?C.teal:C.light}`, borderRadius:8, padding:"7px 14px",
+            background:designerTab===id?"#fff":C.bg, color:designerTab===id?C.navy:C.muted, fontWeight:700,
+            fontSize:12.5, cursor:"pointer", fontFamily:"inherit", boxShadow:designerTab===id?"0 1px 4px rgba(15,23,42,0.08)":"none",
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {designerTab === "free_build" ? (
+        <FreeFormBuilder />
+      ) : (
     <div style={{ display:"flex", flex:1, minWidth:0, maxWidth:"100%", overflow:"hidden", background:"#DDE7F0" }}>
       <aside style={{ width:200, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.light}`, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <div style={{ padding:14, borderBottom:`1px solid ${C.light}` }}>
@@ -406,6 +422,8 @@ export function VisualDesigner({ headerConfig, sections, jobEntries }) {
       <aside style={{ width:260, flexShrink:0, background:"#fff", borderLeft:`1px solid ${C.light}`, overflowY:"auto", overflowX:"hidden" }}>
         <Inspector block={selectedBlock} onStyleChange={updateSelectedStyle} onTextChange={updateSelectedText} />
       </aside>
+    </div>
+      )}
     </div>
   );
 }
