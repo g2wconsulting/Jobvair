@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { supabase } from "../../supabaseClient.js";
 import { FONT_PRESETS } from "../../constants/appConstants.js";
 import {
@@ -8,7 +8,7 @@ import {
 import {
   Type, Heading1, AlignLeft, Square, Minus, GripVertical,
   BarChart3, Tag, ImageIcon, Circle, Grid3x3, Copy, Trash2,
-  ChevronUp, ChevronDown, AlignCenter, AlignRight, Check, AlertTriangle,
+  ChevronUp, ChevronDown, AlignCenter, AlignRight,
 } from "lucide-react";
 
 const FREEFORM_DESIGN_VERSION = "freeform_design_v1";
@@ -50,7 +50,7 @@ function ResizeHandle({ handle, onResizeStart }) {
   );
 }
 
-function CanvasElement({ el, selected, zoom, onSelect, onMove, onResize, onTextChange }) {
+function CanvasElement({ el, selected, zoom, onSelect, onMove, onResize, onTextChange, onDragEnd }) {
   const dragRef = useRef(null);
   const resizeRef = useRef(null);
   const [editing, setEditing] = useState(false);
@@ -68,7 +68,7 @@ function CanvasElement({ el, selected, zoom, onSelect, onMove, onResize, onTextC
     const dy = (e.clientY - dragRef.current.startY) / zoom;
     onMove(el.id, dragRef.current.originalX + dx, dragRef.current.originalY + dy);
   };
-  const endDrag = e => { dragRef.current = null; e.currentTarget.releasePointerCapture?.(e.pointerId); };
+  const endDrag = e => { dragRef.current = null; e.currentTarget.releasePointerCapture?.(e.pointerId); onDragEnd?.(); };
 
   const onResizeStart = (e, handle) => {
     e.preventDefault(); e.stopPropagation();
@@ -290,18 +290,21 @@ function PropertiesPanel({ el, onUpdate, onDuplicate, onDelete, onLayer }) {
   );
 }
 
-export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) {
+const FreeFormBuilder = forwardRef(function FreeFormBuilder({ resumeId, userId, onEnsureResumeId, onSaveStateChange }, ref) {
   const [elements, setElements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showGrid, setShowGrid] = useState(true);
   const [zoom, setZoom] = useState(0.72);
+  const [guides, setGuides] = useState({ x: [], y: [] });
   const addCountRef = useRef(0);
 
   const [loading, setLoading] = useState(Boolean(resumeId));
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const loadedResumeIdRef = useRef(null);
-  const skipNextAutosaveRef = useRef(true); // don't autosave the instant we hydrate from the server
+  const skipNextAutosaveRef = useRef(false); // only set true right after hydrating from the server, so we don't immediately re-save what we just loaded
   const autosaveTimerRef = useRef(null);
+
+  useEffect(() => { onSaveStateChange?.(saveState); }, [saveState, onSaveStateChange]);
 
   // ── Load the saved Free Build design for this resume, if any ─────────────
   useEffect(() => {
@@ -370,6 +373,8 @@ export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) 
     persist(elements);
   };
 
+  useImperativeHandle(ref, () => ({ saveNow }));
+
   const selected = elements.find(e => e.id === selectedId) || null;
 
   const addElement = (type) => {
@@ -385,9 +390,48 @@ export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) 
     setElements(list => list.map(e => e.id === id ? clampToCanvas({ ...e, ...patch }) : e));
   };
 
+  const SNAP_THRESHOLD = 6;
+
   const moveElement = (id, x, y) => {
-    setElements(list => list.map(e => e.id === id ? clampToCanvas({ ...e, x, y }) : e));
+    const dragged = elements.find(e => e.id === id);
+    if (!dragged) return;
+    const { w, h } = dragged;
+
+    const candidatesX = [CANVAS_WIDTH / 2];
+    const candidatesY = [CANVAS_HEIGHT / 2];
+    elements.forEach(e => {
+      if (e.id === id) return;
+      candidatesX.push(e.x, e.x + e.w / 2, e.x + e.w);
+      candidatesY.push(e.y, e.y + e.h / 2, e.y + e.h);
+    });
+
+    let snappedX = x;
+    let snappedY = y;
+    const activeX = new Set();
+    const activeY = new Set();
+
+    [x, x + w / 2, x + w].forEach((val, i) => {
+      candidatesX.forEach(c => {
+        if (Math.abs(val - c) < SNAP_THRESHOLD) {
+          activeX.add(c);
+          snappedX = i === 0 ? c : i === 1 ? c - w / 2 : c - w;
+        }
+      });
+    });
+    [y, y + h / 2, y + h].forEach((val, i) => {
+      candidatesY.forEach(c => {
+        if (Math.abs(val - c) < SNAP_THRESHOLD) {
+          activeY.add(c);
+          snappedY = i === 0 ? c : i === 1 ? c - h / 2 : c - h;
+        }
+      });
+    });
+
+    setGuides({ x: [...activeX], y: [...activeY] });
+    setElements(list => list.map(e => e.id === id ? clampToCanvas({ ...e, x: snappedX, y: snappedY }) : e));
   };
+
+  const clearGuides = () => setGuides({ x: [], y: [] });
 
   const resizeElementById = (id, patch) => {
     setElements(list => list.map(e => e.id === id ? clampToCanvas(patch) : e));
@@ -427,16 +471,7 @@ export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) 
     <div style={{ display: "flex", flex: 1, minWidth: 0, maxWidth: "100%", overflow: "hidden", background: "#DDE7F0" }}>
       <aside style={{ width: 210, flexShrink: 0, background: "#fff", borderRight: "1px solid #E2E8F0", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "14px 14px 10px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Elements</div>
-            <button
-              onClick={saveNow}
-              disabled={saveState === "saving"}
-              style={{ border: "none", background: "none", cursor: saveState === "saving" ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700, color: "#00BFA5", display: "flex", alignItems: "center", gap: 3, padding: 0 }}
-            >
-              {saveState === "saving" ? "Saving…" : saveState === "saved" ? <><Check size={12} /> Saved</> : saveState === "error" ? <><AlertTriangle size={12} color="#DC2626" /></> : "Save"}
-            </button>
-          </div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Elements</div>
           <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>Click to add to canvas</div>
         </div>
         <div style={{ padding: "0 10px 10px", overflowY: "auto", flex: 1 }}>
@@ -507,7 +542,14 @@ export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) 
                 onMove={moveElement}
                 onResize={resizeElementById}
                 onTextChange={textChange}
+                onDragEnd={clearGuides}
               />
+            ))}
+            {guides.x.map(gx => (
+              <div key={`gx-${gx}`} style={{ position: "absolute", left: gx, top: 0, bottom: 0, width: 0, borderLeft: "1px dashed #00BFA5", zIndex: 1500, pointerEvents: "none" }} />
+            ))}
+            {guides.y.map(gy => (
+              <div key={`gy-${gy}`} style={{ position: "absolute", top: gy, left: 0, right: 0, height: 0, borderTop: "1px dashed #00BFA5", zIndex: 1500, pointerEvents: "none" }} />
             ))}
           </div>
         </div>
@@ -524,4 +566,8 @@ export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) 
       </aside>
     </div>
   );
-}
+});
+
+FreeFormBuilder.displayName = "FreeFormBuilder";
+
+export default FreeFormBuilder;

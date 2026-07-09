@@ -10,7 +10,7 @@ import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx
 import { SectionHeadingRenderer } from "../resume-templates/renderers/SectionHeadingRenderer.jsx";
 import { findResumeTemplateBySlug, getPersistableTemplateId, mergeResumeTemplates } from "../resume-templates/templateRegistry.js";
 import TemplateGalleryModal from "../resume-templates/TemplateGalleryModal.jsx";
-import { VisualDesigner } from "../resume-designer/components/VisualDesigner.jsx";
+import FreeFormBuilder from "../resume-designer/components/FreeFormBuilder.jsx";
 import AssistantPanel from "../assistant/AssistantPanel.jsx";
 
 const ACCENT_COLOR_SWATCHES = [
@@ -58,6 +58,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const [measuredHeights, setMeasuredHeights] = useState({});
   const [assistantOpen,  setAssistantOpen]   = useState(false);
   const [galleryOpen,    setGalleryOpen]     = useState(false);
+  const [freeformSaveState, setFreeformSaveState] = useState("idle");
+  const freeformRef = useRef(null);
   const fileRef    = useRef(null);
   const previewRef = useRef(null);
   const structuredHeaderRef = useRef(null);
@@ -883,8 +885,8 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           {saveState==="saved" && <span className="jv-save-indicator jv-save-indicator--saved"><CheckCircle2 size={13} /> Saved</span>}
           {saveState==="error" && <span className="jv-save-indicator jv-save-indicator--error"><AlertCircle size={13} /> Save failed</span>}
           <div className="jv-mode-switch">
-            <button onClick={()=>setBuilderMode("structured")} className={`jv-mode-switch__btn${builderMode==="structured"?" jv-mode-switch__btn--active":""}`}>Structured</button>
-            <button onClick={()=>{ setBuilderMode("visual"); closeToolbarPanel(); setInspectorOpen(false); }} className={`jv-mode-switch__btn${builderMode==="visual"?" jv-mode-switch__btn--active":""}`}>Visual Designer</button>
+            <button onClick={()=>setBuilderMode("structured")} className={`jv-mode-switch__btn${builderMode==="structured"?" jv-mode-switch__btn--active":""}`}>Templates</button>
+            <button onClick={()=>{ setBuilderMode("visual"); closeToolbarPanel(); setInspectorOpen(false); }} className={`jv-mode-switch__btn${builderMode==="visual"?" jv-mode-switch__btn--active":""}`}>Free Build</button>
           </div>
         </div>
         {builderMode === "structured" ? (
@@ -901,7 +903,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           </div>
         ) : (
           <div style={{ fontSize:12, color:C.textMuted, fontWeight:700 }}>
-            Visual Designer prototype - changes are local only
+            Drag elements onto the canvas, then style them in the panel on the right
           </div>
         )}
         {builderMode === "structured" ? (
@@ -914,8 +916,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             </button>
           </div>
         ) : (
-          <div style={{ display:"flex", gap:6, alignItems:"center", fontSize:11, color:C.textMuted }}>
-            Save/export comes in a later phase
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            {freeformSaveState==="saved" && <span className="jv-save-indicator jv-save-indicator--saved"><CheckCircle2 size={13} /> Saved</span>}
+            {freeformSaveState==="error" && <span className="jv-save-indicator jv-save-indicator--error"><AlertCircle size={13} /> Save failed</span>}
+            <button className="jv-toolbar-action jv-toolbar-action--primary" disabled={freeformSaveState==="saving"} onClick={()=>freeformRef.current?.saveNow()}>
+              <Save size={14} /> {freeformSaveState==="saving"?"Saving...":"Save"}
+            </button>
           </div>
         )}
       </div>
@@ -955,7 +961,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       )}
 
       {builderMode === "visual" ? (
-        <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} resumeId={resumeId} user={user} onEnsureResumeId={saveResume} />
+        <FreeFormBuilder ref={freeformRef} resumeId={resumeId} userId={user?.id} onEnsureResumeId={saveResume} onSaveStateChange={setFreeformSaveState} />
       ) : (
         <>
           <div style={{ flexShrink:0, padding:"8px 20px", background:"#F8FAFC", borderBottom:`1px solid ${C.border}`, color:C.textMuted, fontSize:12, fontWeight:600 }}>
