@@ -265,7 +265,7 @@ function Inspector({ block, onStyleChange, onTextChange }) {
   );
 }
 
-export function VisualDesigner({ headerConfig, sections, jobEntries }) {
+export function VisualDesigner({ headerConfig, sections, jobEntries, resumeId, user, onEnsureResumeId }) {
   const [designerTab, setDesignerTab] = useState("templates"); // "templates" | "free_build"
   const [design, setDesign] = useState(() => createDefaultDesign({ header: headerConfig, sections: sections || [], jobs: jobEntries || [] }));
   const [selectedBlockId, setSelectedBlockId] = useState("profile_name_1");
@@ -367,7 +367,7 @@ export function VisualDesigner({ headerConfig, sections, jobEntries }) {
       </div>
 
       {designerTab === "free_build" ? (
-        <FreeFormBuilder />
+        <FreeFormBuilder resumeId={resumeId} userId={user?.id} onEnsureResumeId={onEnsureResumeId} />
       ) : (
     <div style={{ display:"flex", flex:1, minWidth:0, maxWidth:"100%", overflow:"hidden", background:"#DDE7F0" }}>
       <aside style={{ width:200, flexShrink:0, background:"#fff", borderRight:`1px solid ${C.light}`, display:"flex", flexDirection:"column", overflow:"hidden" }}>

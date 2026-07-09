@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "../../supabaseClient.js";
 import { FONT_PRESETS } from "../../constants/appConstants.js";
 import {
   CANVAS_WIDTH, CANVAS_HEIGHT, FILL_SWATCHES, ELEMENT_PALETTE,
@@ -7,8 +8,10 @@ import {
 import {
   Type, Heading1, AlignLeft, Square, Minus, GripVertical,
   BarChart3, Tag, ImageIcon, Circle, Grid3x3, Copy, Trash2,
-  ChevronUp, ChevronDown, AlignCenter, AlignRight,
+  ChevronUp, ChevronDown, AlignCenter, AlignRight, Check, AlertTriangle,
 } from "lucide-react";
+
+const FREEFORM_DESIGN_VERSION = "freeform_design_v1";
 
 const PALETTE_ICONS = {
   heading: Heading1, subheading: Type, text_block: AlignLeft, color_block: Square,
@@ -287,12 +290,85 @@ function PropertiesPanel({ el, onUpdate, onDuplicate, onDelete, onLayer }) {
   );
 }
 
-export default function FreeFormBuilder() {
+export default function FreeFormBuilder({ resumeId, userId, onEnsureResumeId }) {
   const [elements, setElements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showGrid, setShowGrid] = useState(true);
   const [zoom, setZoom] = useState(0.72);
   const addCountRef = useRef(0);
+
+  const [loading, setLoading] = useState(Boolean(resumeId));
+  const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
+  const loadedResumeIdRef = useRef(null);
+  const skipNextAutosaveRef = useRef(true); // don't autosave the instant we hydrate from the server
+  const autosaveTimerRef = useRef(null);
+
+  // ── Load the saved Free Build design for this resume, if any ─────────────
+  useEffect(() => {
+    let cancelled = false;
+    if (!resumeId) {
+      return undefined;
+    }
+    if (loadedResumeIdRef.current === resumeId) return undefined;
+
+    setLoading(true);
+    supabase
+      .from("resumes")
+      .select("freeform_design_json")
+      .eq("id", resumeId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (!error && data?.freeform_design_json?.elements) {
+          skipNextAutosaveRef.current = true;
+          setElements(data.freeform_design_json.elements);
+        }
+        loadedResumeIdRef.current = resumeId;
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [resumeId]);
+
+  const persist = async (elementsToSave) => {
+    setSaveState("saving");
+    try {
+      let rid = resumeId;
+      if (!rid) {
+        rid = await onEnsureResumeId?.();
+      }
+      if (!rid) throw new Error("No resume to save to yet");
+      const { error } = await supabase
+        .from("resumes")
+        .update({ freeform_design_json: { version: FREEFORM_DESIGN_VERSION, elements: elementsToSave } })
+        .eq("id", rid);
+      if (error) throw error;
+      loadedResumeIdRef.current = rid;
+      setSaveState("saved");
+      setTimeout(() => setSaveState(s => (s === "saved" ? "idle" : s)), 2000);
+    } catch (err) {
+      console.error("[FreeFormBuilder] save error:", err.message);
+      setSaveState("error");
+      setTimeout(() => setSaveState(s => (s === "error" ? "idle" : s)), 3000);
+    }
+  };
+
+  // ── Debounced autosave whenever elements change ───────────────────────────
+  useEffect(() => {
+    if (loading) return undefined;
+    if (skipNextAutosaveRef.current) { skipNextAutosaveRef.current = false; return undefined; }
+    if (!userId) return undefined; // not signed in yet — nothing to save against
+
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => { persist(elements); }, 1500);
+    return () => clearTimeout(autosaveTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persist is stable enough for this debounce; including it would retrigger on every render
+  }, [elements, loading, userId]);
+
+  const saveNow = () => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    persist(elements);
+  };
 
   const selected = elements.find(e => e.id === selectedId) || null;
 
@@ -351,7 +427,16 @@ export default function FreeFormBuilder() {
     <div style={{ display: "flex", flex: 1, minWidth: 0, maxWidth: "100%", overflow: "hidden", background: "#DDE7F0" }}>
       <aside style={{ width: 210, flexShrink: 0, background: "#fff", borderRight: "1px solid #E2E8F0", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "14px 14px 10px" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Elements</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Elements</div>
+            <button
+              onClick={saveNow}
+              disabled={saveState === "saving"}
+              style={{ border: "none", background: "none", cursor: saveState === "saving" ? "not-allowed" : "pointer", fontSize: 11, fontWeight: 700, color: "#00BFA5", display: "flex", alignItems: "center", gap: 3, padding: 0 }}
+            >
+              {saveState === "saving" ? "Saving…" : saveState === "saved" ? <><Check size={12} /> Saved</> : saveState === "error" ? <><AlertTriangle size={12} color="#DC2626" /></> : "Save"}
+            </button>
+          </div>
           <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>Click to add to canvas</div>
         </div>
         <div style={{ padding: "0 10px 10px", overflowY: "auto", flex: 1 }}>
@@ -400,7 +485,12 @@ export default function FreeFormBuilder() {
               border: "1px solid #CBD5E1",
             }}
           >
-            {elements.length === 0 && (
+            {loading && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.85)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#64748B", zIndex: 2000 }}>
+                Loading your saved design…
+              </div>
+            )}
+            {!loading && elements.length === 0 && (
               <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", color: "#94A3B8", fontSize: 13, pointerEvents: "none" }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>+</div>
                 <div>Click elements in the panel to add them</div>

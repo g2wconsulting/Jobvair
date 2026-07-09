@@ -349,9 +349,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       if (jobRows.length) await supabase.from("work_experience_entries").insert(jobRows);
 
       setSaveState("saved"); setTimeout(() => setSaveState("idle"), 2500);
+      return rid;
     } catch (err) {
       console.error("[BuilderPage] save error:", err.message);
       setSaveState("error"); setTimeout(() => setSaveState("idle"), 3000);
+      return null;
     }
   };
 
@@ -953,7 +955,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
       )}
 
       {builderMode === "visual" ? (
-        <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} />
+        <VisualDesigner headerConfig={hc} sections={sorted} jobEntries={sortedJobs} resumeId={resumeId} user={user} onEnsureResumeId={saveResume} />
       ) : (
         <>
           <div style={{ flexShrink:0, padding:"8px 20px", background:"#F8FAFC", borderBottom:`1px solid ${C.border}`, color:C.textMuted, fontSize:12, fontWeight:600 }}>
