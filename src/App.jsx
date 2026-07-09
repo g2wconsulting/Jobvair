@@ -205,10 +205,10 @@ export default function App() {
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <Sidebar active={page} onNav={setPage} user={user} collapsed={collapsed} onCollapse={()=>setCollapsed(c=>!c)} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
-        <div style={{ height:60, background:C.bgCard, borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 28px", flexShrink:0 }}>
-          <div style={{ fontSize:14, color:C.textMuted }}>
-            {NAV.find(n=>n.id===page)?.icon}{" "}
-            <span style={{ color:C.navy, fontWeight:600 }}>{NAV.find(n=>n.id===page)?.label || "Dashboard"}</span>
+        <div style={{ height:64, background:"rgba(255,255,255,0.85)", backdropFilter:"blur(8px)", borderBottom:`1px solid ${C.border}`, boxShadow:"0 1px 3px rgba(13,27,42,0.04)", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 28px", flexShrink:0, position:"sticky", top:0, zIndex:20 }}>
+          <div style={{ fontSize:15, color:C.textMuted, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:16 }}>{NAV.find(n=>n.id===page)?.icon}</span>
+            <span style={{ color:C.navy, fontWeight:700, fontSize:16, letterSpacing:"-0.01em" }}>{NAV.find(n=>n.id===page)?.label || "Dashboard"}</span>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             {user?.idVerified && <Badge color="teal" small>🛡 Verified</Badge>}

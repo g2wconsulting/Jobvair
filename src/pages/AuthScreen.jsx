@@ -96,7 +96,7 @@ export default function AuthScreen({ onLogin }) {
 
         {/* ── LOGIN ── */}
         {mode === "login" && (
-          <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px" }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:"32px 36px", boxShadow:"0 24px 64px rgba(0,0,0,0.28)" }}>
             <h2 style={{ margin:"0 0 6px", fontSize:22, fontWeight:700, color:C.navy }}>Welcome back</h2>
             <p style={{ margin:"0 0 24px", fontSize:14, color:C.textMuted }}>Sign in to your Jobvair account</p>
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
@@ -115,7 +115,7 @@ export default function AuthScreen({ onLogin }) {
 
         {/* ── SIGNUP STEP 1 ── */}
         {mode === "signup" && step === 1 && (
-          <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px" }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:"32px 36px", boxShadow:"0 24px 64px rgba(0,0,0,0.28)" }}>
             <StepDots total={4} current={1} />
             <h2 style={{ margin:"0 0 6px", fontSize:22, fontWeight:700, color:C.navy }}>Create your account</h2>
             <p style={{ margin:"0 0 24px", fontSize:14, color:C.textMuted }}>Start your career journey today</p>
@@ -134,7 +134,7 @@ export default function AuthScreen({ onLogin }) {
 
         {/* ── SIGNUP STEP 2: Email Verification ── */}
         {mode === "signup" && step === 2 && (
-          <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px", textAlign:"center" }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:"32px 36px", textAlign:"center", boxShadow:"0 24px 64px rgba(0,0,0,0.28)" }}>
             <StepDots total={4} current={2} />
             <div style={{ width:64, height:64, borderRadius:"50%", background:C.tealLight, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px", fontSize:28 }}>📧</div>
             <h2 style={{ margin:"0 0 8px", fontSize:20, fontWeight:700, color:C.navy }}>Check your email</h2>
@@ -148,7 +148,7 @@ export default function AuthScreen({ onLogin }) {
 
         {/* ── SIGNUP STEP 3: ID Verification ── */}
         {mode === "signup" && step === 3 && (
-          <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px" }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:"32px 36px", boxShadow:"0 24px 64px rgba(0,0,0,0.28)" }}>
             <StepDots total={4} current={3} />
             <div style={{ textAlign:"center", marginBottom:24 }}>
               <div style={{ width:64, height:64, borderRadius:"50%", background:`linear-gradient(135deg, ${C.teal}, ${C.navyMid})`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:28 }}>🛡</div>
@@ -219,7 +219,7 @@ export default function AuthScreen({ onLogin }) {
 
         {/* ── RESET ── */}
         {mode === "reset" && (
-          <div style={{ background:"#fff", borderRadius:16, padding:"32px 36px" }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:"32px 36px", boxShadow:"0 24px 64px rgba(0,0,0,0.28)" }}>
             <h2 style={{ margin:"0 0 6px", fontSize:22, fontWeight:700, color:C.navy }}>Reset password</h2>
             <p style={{ margin:"0 0 24px", fontSize:14, color:C.textMuted }}>Enter your email and we'll send a reset link</p>
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
