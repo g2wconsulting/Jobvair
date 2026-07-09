@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { useProfile } from "./useProfile";
 import { Bell, ShieldCheck } from "lucide-react";
-import { C, EMPTY_USER, NAV } from "./constants/appConstants.js";
+import { EMPTY_USER, NAV } from "./constants/appConstants.js";
 import { Badge, Avatar } from "./components/ui/index.js";
 import Sidebar from "./components/Sidebar.jsx";
 import AuthScreen from "./pages/AuthScreen.jsx";
@@ -185,15 +185,15 @@ export default function App() {
   // ── Loading screen while we check for an existing session ─────────────────
   if (authUser === undefined) {
     return (
-      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:C.bg, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
+      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"var(--jv-color-page)", fontFamily:"var(--jv-font-sans)" }}>
         <div style={{ textAlign:"center" }}>
-          <div style={{ width:44, height:44, borderRadius:10, background:C.teal, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+          <div style={{ width:44, height:44, borderRadius:10, background:"var(--jv-gradient-primary)", boxShadow:"var(--jv-shadow-glow)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
               <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
             </svg>
           </div>
-          <div style={{ fontSize:14, color:C.textMuted }}>Loading Jobvair…</div>
+          <div style={{ fontSize:14, color:"var(--jv-color-muted)" }}>Loading Jobvair…</div>
         </div>
       </div>
     );
@@ -202,7 +202,7 @@ export default function App() {
   if (!authUser) return <AuthScreen onLogin={handleLogin} />;
 
   return (
-    <div className="jobvair-app-shell" style={{ display:"flex", minHeight:"100vh", background:C.bg, fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
+    <div className="jobvair-app-shell" style={{ display:"flex", minHeight:"100vh", background:"var(--jv-color-page)", fontFamily:"var(--jv-font-sans)" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <Sidebar active={page} onNav={setPage} user={user} collapsed={collapsed} onCollapse={()=>setCollapsed(c=>!c)} onLogout={handleLogout} />
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
@@ -214,7 +214,7 @@ export default function App() {
           <div className="jv-topbar__actions">
             {user?.idVerified && <Badge tone="success" icon={ShieldCheck}>Verified</Badge>}
             <Badge tone={user?.subscription==="free"?"neutral":"warning"}>{user?.subscription==="free"?"Free Plan":"Premium"}</Badge>
-            <button className="jv-topbar__bell" style={{ background:"none", border:"none", cursor:"pointer", color:C.textMuted, padding:8 }}>
+            <button className="jv-topbar__bell" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--jv-color-muted)", padding:8 }}>
               <Bell size={17} />
               <span className="jv-topbar__bell-dot" />
             </button>
@@ -224,7 +224,7 @@ export default function App() {
 
         {/* Profile loading overlay */}
         {profileLoading && (
-          <div style={{ padding:"12px 28px", background:C.tealLight, borderBottom:`1px solid ${C.teal}44`, fontSize:13, color:C.tealDark }}>
+          <div style={{ padding:"12px 28px", background:"var(--jv-color-teal-50)", borderBottom:"1px solid var(--jv-color-border)", fontSize:13, color:"var(--jv-color-teal-700)" }}>
             Loading your profile…
           </div>
         )}

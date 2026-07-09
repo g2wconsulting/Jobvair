@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { C } from "../constants/appConstants.js";
-import { Btn } from "./ui.jsx";
+import { Button } from "./ui/index.js";
+import { Upload, Search, CheckCircle2, Paperclip, AlertTriangle } from "lucide-react";
 import { edgeFetch } from "../lib/edgeFetch.js";
 import { persistResumeEnrichment } from "../lib/profileEnrichment.js";
 
@@ -120,38 +120,38 @@ export default function ResumeUploadZone({ user, onParsed }) {
         onDragLeave={e => { e.preventDefault(); setActive(false); }}
         onDrop={e => { e.preventDefault(); setActive(false); processFile(e.dataTransfer.files[0]); }}
         style={{
-          border: `2px dashed ${active ? C.teal : done ? C.success : error ? C.danger : C.border}`,
-          borderRadius:10, padding:"28px 20px", textAlign:"center",
-          background: active ? C.tealLight : done ? C.successBg : C.bg,
-          cursor: busy ? "not-allowed" : "pointer", transition:"all 0.15s",
+          border: `2px dashed ${active ? "var(--jv-color-primary)" : done ? "var(--jv-color-success-600)" : error ? "var(--jv-color-danger-600)" : "var(--jv-color-border)"}`,
+          borderRadius: "var(--jv-radius-md)", padding: "28px 20px", textAlign: "center",
+          background: active ? "var(--jv-color-teal-50)" : done ? "#dcfce7" : "var(--jv-color-slate-50)",
+          cursor: busy ? "not-allowed" : "pointer", transition: "all 0.15s",
         }}
       >
         {uploading && <>
-          <div style={{ fontSize:28, marginBottom:8 }}>⬆️</div>
-          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>Uploading to secure storage…</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Upload size={28} color="var(--jv-color-primary)" /></div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--jv-color-heading)" }}>Uploading to secure storage…</div>
         </>}
         {parsing && <>
-          <div style={{ fontSize:28, marginBottom:8 }}>🔍</div>
-          <div style={{ fontSize:14, fontWeight:600, color:C.navy }}>Parsing resume with AI…</div>
-          <div style={{ fontSize:12, color:C.textMuted, marginTop:4 }}>Extracting your skills, experience, and education</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Search size={28} color="var(--jv-color-primary)" /></div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--jv-color-heading)" }}>Parsing resume with AI…</div>
+          <div style={{ fontSize: 12, color: "var(--jv-color-muted)", marginTop: 4 }}>Extracting your skills, experience, and education</div>
         </>}
         {done && !busy && <>
-          <div style={{ fontSize:28, marginBottom:8 }}>✅</div>
-          <div style={{ fontSize:14, fontWeight:600, color:C.success }}>{file?.name}</div>
-          <div style={{ fontSize:12, color:C.textMuted, marginTop:4 }}>Parsed successfully — sections updated below. Click to replace.</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><CheckCircle2 size={28} color="var(--jv-color-success-600)" /></div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--jv-color-success-600)" }}>{file?.name}</div>
+          <div style={{ fontSize: 12, color: "var(--jv-color-muted)", marginTop: 4 }}>Parsed successfully — sections updated below. Click to replace.</div>
         </>}
         {!busy && !done && <>
-          <div style={{ fontSize:32, marginBottom:8 }}>📎</div>
-          <div style={{ fontSize:14, color:active ? C.tealDark : C.textMuted, marginBottom:10, fontWeight:active?600:400 }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Paperclip size={30} color="var(--jv-color-muted)" /></div>
+          <div style={{ fontSize: 14, color: active ? "var(--jv-color-teal-700)" : "var(--jv-color-muted)", marginBottom: 10, fontWeight: active ? 600 : 400 }}>
             {active ? "Drop to upload" : "Drag & drop PDF or DOCX"}
           </div>
-          <Btn variant="secondary" small>Browse Files</Btn>
-          <div style={{ fontSize:12, color:C.textLight, marginTop:10 }}>PDF, DOCX, DOC, TXT · max 10 MB</div>
+          <Button variant="secondary" size="sm">Browse Files</Button>
+          <div style={{ fontSize: 12, color: "var(--jv-color-slate-300)", marginTop: 10 }}>PDF, DOCX, DOC, TXT · max 10 MB</div>
         </>}
       </div>
       {error && (
-        <div style={{ marginTop:8, padding:"8px 12px", background:C.dangerBg, borderRadius:8, fontSize:13, color:C.danger }}>
-          ⚠ {error}
+        <div style={{ marginTop: 8, padding: "8px 12px", background: "#fef2f2", borderRadius: "var(--jv-radius-sm)", fontSize: 13, color: "var(--jv-color-danger-600)", display: "flex", alignItems: "center", gap: 6 }}>
+          <AlertTriangle size={14} /> {error}
         </div>
       )}
     </div>
