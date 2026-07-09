@@ -1,3 +1,4 @@
+export { Avatar } from "./Avatar.jsx";
 export { Badge } from "./Badge.jsx";
 export { Banner } from "./Banner.jsx";
 export { Button } from "./Button.jsx";
