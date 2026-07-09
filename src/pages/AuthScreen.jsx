@@ -94,12 +94,12 @@ export default function AuthScreen({ onLogin }) {
           <div style={authCardStyle}>
             <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 750, color: "var(--jv-color-heading)" }}>Welcome back</h2>
             <p style={{ margin: "0 0 24px", fontSize: 14, color: "var(--jv-color-muted)" }}>Sign in to your Jobvair account</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <form onSubmit={e => { e.preventDefault(); submitLogin(); }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required />
               <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
               {msg && <div style={{ background: "var(--jv-color-teal-50)", color: "var(--jv-color-teal-700)", padding: "10px 14px", borderRadius: "var(--jv-radius-sm)", fontSize: 13 }}>{msg}</div>}
-              <Button onClick={submitLogin} disabled={loading} full>{loading ? "Please wait…" : "Sign in"}</Button>
-            </div>
+              <Button type="submit" disabled={loading} full>{loading ? "Please wait…" : "Sign in"}</Button>
+            </form>
             <div style={{ marginTop: 20, textAlign: "center", fontSize: 13, color: "var(--jv-color-muted)" }}>
               <button onClick={() => { setMode("reset"); setMsg(""); }} style={{ background: "none", border: "none", color: "var(--jv-color-primary)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>Forgot password?</button>
               <span style={{ margin: "0 8px" }}>·</span>
@@ -113,13 +113,13 @@ export default function AuthScreen({ onLogin }) {
             <StepDots total={4} current={1} />
             <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 750, color: "var(--jv-color-heading)" }}>Create your account</h2>
             <p style={{ margin: "0 0 24px", fontSize: 14, color: "var(--jv-color-muted)" }}>Start your career journey today</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <form onSubmit={e => { e.preventDefault(); submitSignup(); }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <Input label="Full Name" value={name} onChange={e => setName(e.target.value)} placeholder="Alex Rivera" required />
               <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required />
               <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a strong password" required />
               {msg && <div style={{ background: "#fef2f2", color: "var(--jv-color-danger-600)", padding: "10px 14px", borderRadius: "var(--jv-radius-sm)", fontSize: 13 }}>{msg}</div>}
-              <Button onClick={submitSignup} disabled={loading} full>{loading ? "Creating account…" : "Create Account"}</Button>
-            </div>
+              <Button type="submit" disabled={loading} full>{loading ? "Creating account…" : "Create Account"}</Button>
+            </form>
             <div style={{ marginTop: 20, textAlign: "center", fontSize: 13, color: "var(--jv-color-muted)" }}>
               <button onClick={() => { setMode("login"); setMsg(""); }} style={{ background: "none", border: "none", color: "var(--jv-color-primary)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>Already have an account? Sign in</button>
             </div>
@@ -218,11 +218,11 @@ export default function AuthScreen({ onLogin }) {
           <div style={authCardStyle}>
             <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 750, color: "var(--jv-color-heading)" }}>Reset password</h2>
             <p style={{ margin: "0 0 24px", fontSize: 14, color: "var(--jv-color-muted)" }}>Enter your email and we'll send a reset link</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <form onSubmit={e => { e.preventDefault(); submitReset(); }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" required />
               {msg && <div style={{ background: "var(--jv-color-teal-50)", color: "var(--jv-color-teal-700)", padding: "10px 14px", borderRadius: "var(--jv-radius-sm)", fontSize: 13 }}>{msg}</div>}
-              <Button onClick={submitReset} disabled={loading} full>{loading ? "Sending…" : "Send Reset Link"}</Button>
-            </div>
+              <Button type="submit" disabled={loading} full>{loading ? "Sending…" : "Send Reset Link"}</Button>
+            </form>
             <div style={{ marginTop: 20, textAlign: "center" }}>
               <button onClick={() => { setMode("login"); setMsg(""); }} style={{ background: "none", border: "none", color: "var(--jv-color-primary)", cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>← Back to sign in</button>
             </div>
