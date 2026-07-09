@@ -738,40 +738,39 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
   const renderRightPanel = () => {
     if (showHeaderPanel || activeSection === "name") return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+        <div className="jv-inspector-header">
           <div>
-            <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Header</div>
-            <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit resume-specific name, title, and contact info</div>
+            <div className="jv-inspector-title">Header</div>
+            <div className="jv-inspector-sub">Edit resume-specific name, title, and contact info</div>
           </div>
-          <Btn small variant="ghost" onClick={closeToolbarPanel}>Done</Btn>
+          <button className="jv-panel-done" onClick={closeToolbarPanel}>Done</button>
         </div>
-        <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:10 }}>
+        <div className="jv-inspector-body">
           {[
             ["name","Full Name","text"],["headline","Optional Headline / Title","text"],["email","Email","email"],
             ["phone","Phone","tel"],["location","Location","text"],["linkedin","LinkedIn URL","text"],
             ["website","Website","text"],["github","GitHub","text"],["custom_contact_line","Custom Line","text"],
           ].map(([field,label,type]) => (
             <div key={field}>
-              <div style={{ fontSize:11, color:C.textMuted, marginBottom:3, fontWeight:600 }}>{label}</div>
-              <input type={type} value={hc[field]||""} onChange={e=>setHC(field,e.target.value)} placeholder={label}
-                style={{ width:"100%", padding:"7px 9px", border:`1px solid ${C.border}`, borderRadius:6, fontSize:12, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
+              <div className="jv-field-label">{label}</div>
+              <input type={type} value={hc[field]||""} onChange={e=>setHC(field,e.target.value)} placeholder={label} className="jv-field-input" />
             </div>
           ))}
-          <div style={{ paddingTop:12, borderTop:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:8 }}>Show / Hide</div>
+          <div className="jv-inspector-divider">
+            <div className="jv-inspector-divider-title">Show / Hide</div>
             {[
               ["show_headline","Optional Headline / Title"],["show_email","Email"],["show_phone","Phone"],
               ["show_location","Location"],["show_linkedin","LinkedIn"],["show_website","Website"],
               ["show_github","GitHub"],["show_custom","Custom Line"],
             ].map(([field,label]) => (
-              <label key={field} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 0", cursor:"pointer" }}>
-                <input type="checkbox" checked={hc[field]||false} onChange={e=>setHC(field,e.target.checked)} style={{ accentColor:C.teal, width:14, height:14 }} />
-                <span style={{ fontSize:12, color:hc[field]?C.tealDark:C.slate }}>{label}</span>
+              <label key={field} className="jv-checkbox-row">
+                <input type="checkbox" checked={hc[field]||false} onChange={e=>setHC(field,e.target.checked)} />
+                <span style={{ fontSize:12, color:hc[field]?"var(--jv-color-teal-700)":"var(--jv-color-slate-600)" }}>{label}</span>
               </label>
             ))}
           </div>
-          <div style={{ paddingTop:12, borderTop:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:11, fontWeight:700, color:C.navy, marginBottom:8 }}>Header Layout</div>
+          <div className="jv-inspector-divider">
+            <div className="jv-inspector-divider-title">Header Layout</div>
             {HEADER_LAYOUTS.map(h => {
               const locked = h.tier==="premium" && !isPaid;
               const implemented = isHeaderLayoutImplemented(h.id);
@@ -779,12 +778,12 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
               const isActive = hdrLayout===h.id;
               return (
                 <div key={h.id} onClick={()=>{ if(!disabled) setHeaderLayout(h.id); }}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", borderRadius:7, marginBottom:4, cursor:disabled?"not-allowed":"pointer", border:`1px solid ${isActive?C.teal:C.border}`, background:isActive?C.tealLight:"transparent", opacity:disabled?0.55:1 }}>
+                  className={`jv-layout-row${isActive?" jv-layout-row--active":""}${disabled?" jv-layout-row--disabled":""}`}>
                   <span style={{ fontSize:16 }}>{h.icon}</span>
-                  <span style={{ fontSize:12, flex:1, color:C.navy }}>{h.label}</span>
-                  {!implemented && <span style={{ fontSize:10, color:C.textMuted }}>Coming soon</span>}
-                  {locked && <span style={{ fontSize:10, color:C.gold }}>Pro</span>}
-                  {isActive && <span style={{ fontSize:11, color:C.teal, fontWeight:700 }}>check</span>}
+                  <span style={{ fontSize:12, flex:1, color:"var(--jv-color-heading)" }}>{h.label}</span>
+                  {!implemented && <span style={{ fontSize:10, color:"var(--jv-color-muted)" }}>Coming soon</span>}
+                  {locked && <span style={{ fontSize:10, color:"var(--jv-color-gold-500)" }}>Pro</span>}
+                  {isActive && <span style={{ fontSize:11, color:"var(--jv-color-primary)", fontWeight:700 }}>✓</span>}
                 </div>
               );
             })}
@@ -795,17 +794,17 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
     if (activeSection === "experience") return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Work Experience</div>
-          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Drag jobs to reorder</div>
+        <div className="jv-inspector-header" style={{ display:"block" }}>
+          <div className="jv-inspector-title">Work Experience</div>
+          <div className="jv-inspector-sub">Drag jobs to reorder</div>
         </div>
         <div style={{ padding:16 }}>
-          <button onClick={addJob} style={{ width:"100%", padding:"9px", background:C.teal, border:"none", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:700, color:"#fff", fontFamily:"inherit", marginBottom:12 }}>Add Job</button>
+          <button onClick={addJob} className="jv-add-btn">Add Job</button>
           {sortedJobs.map(j => (
             <div key={j.id} onClick={()=>{ setActiveJobId(j.id); setInspectorOpen(true); }}
-              style={{ padding:"8px 10px", borderRadius:7, border:`1px solid ${activeJobId===j.id?C.teal:C.border}`, background:activeJobId===j.id?C.tealLight:"transparent", cursor:"pointer", marginBottom:6 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{j.job_title||"(no title)"}</div>
-              <div style={{ fontSize:11, color:C.textMuted }}>{j.company||""}</div>
+              className={`jv-job-row${activeJobId===j.id?" jv-job-row--active":""}`}>
+              <div style={{ fontSize:12, fontWeight:600, color:"var(--jv-color-heading)" }}>{j.job_title||"(no title)"}</div>
+              <div style={{ fontSize:11, color:"var(--jv-color-muted)" }}>{j.company||""}</div>
             </div>
           ))}
         </div>
@@ -814,26 +813,27 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
 
     if (activeSec) return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{activeSec.label}</div>
-          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Edit this resume block</div>
+        <div className="jv-inspector-header" style={{ display:"block" }}>
+          <div className="jv-inspector-title">{activeSec.label}</div>
+          <div className="jv-inspector-sub">Edit this resume block</div>
         </div>
-        <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+        <div className="jv-inspector-body">
           <div>
-            <div style={{ fontSize:11, color:C.textMuted, marginBottom:5, fontWeight:700 }}>Content</div>
+            <div className="jv-field-label">Content</div>
             <textarea
               value={activeSec.content?.text || ""}
               onChange={e=>setContent(activeSec.id || activeSec.section_type, e.target.value)}
               rows={10}
               placeholder={`Enter your ${activeSec.label.toLowerCase()}...`}
-              style={{ width:"100%", resize:"vertical", minHeight:160, padding:"9px 10px", border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, lineHeight:1.55, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
+              className="jv-field-input"
+              style={{ resize:"vertical", minHeight:160, lineHeight:1.55 }}
             />
           </div>
           <label style={{ display:"flex", alignItems:"center", gap:8, cursor:activeSec.is_required?"not-allowed":"pointer", opacity:activeSec.is_required?0.5:1 }}>
-            <input type="checkbox" checked={activeSec.is_visible!==false} disabled={activeSec.is_required} onChange={()=>toggleVisible(activeSec.id || activeSec.section_type)} style={{ accentColor:C.teal, width:14, height:14 }} />
-            <span style={{ fontSize:12, color:C.slate }}>Show section on resume</span>
+            <input type="checkbox" checked={activeSec.is_visible!==false} disabled={activeSec.is_required} onChange={()=>toggleVisible(activeSec.id || activeSec.section_type)} style={{ accentColor:"var(--jv-color-primary)", width:14, height:14 }} />
+            <span style={{ fontSize:12, color:"var(--jv-color-slate-600)" }}>Show section on resume</span>
           </label>
-          <div style={{ padding:"10px 11px", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, fontSize:11, color:C.textMuted, lineHeight:1.5 }}>
+          <div className="jv-doc-card" style={{ fontSize:11, color:"var(--jv-color-muted)", lineHeight:1.5 }}>
             Reorder this block from the canvas or the Layers panel on the left.
           </div>
         </div>
@@ -843,11 +843,11 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     // Default document inspector
     return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-        <div style={{ padding:"16px 16px 12px", borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>Document Settings</div>
-          <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Select a resume block to edit its properties.</div>
+        <div className="jv-inspector-header" style={{ display:"block" }}>
+          <div className="jv-inspector-title">Document Settings</div>
+          <div className="jv-inspector-sub">Select a resume block to edit its properties.</div>
         </div>
-        <div style={{ overflowY:"auto", flex:1, padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+        <div className="jv-inspector-body">
           {[
             ["Template", selectedTmpl?.name || tmpl.name || "Modern", () => openToolbarPanel("templates")],
             ["Font", FONT_PRESETS.find(f => f.value === fontFamily)?.label || fontFamily.split(",")[0], () => openToolbarPanel("fonts")],
@@ -855,15 +855,15 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             ["Section Spacing", tmpl.section_spacing || "normal", null],
             ["Page Margins", tmpl.page_margin || "normal", null],
           ].map(([label, value, action]) => (
-            <div key={label} style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"10px 11px", background:C.bg }}>
-              <div style={{ fontSize:10, color:C.textMuted, fontWeight:700, textTransform:"uppercase", marginBottom:4 }}>{label}</div>
+            <div key={label} className="jv-doc-card">
+              <div className="jv-doc-card__label">{label}</div>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <div style={{ flex:1, fontSize:12, color:C.navy, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value}</div>
-                {action && <button onClick={action} style={{ border:`1px solid ${C.border}`, background:"#fff", borderRadius:6, padding:"3px 7px", fontSize:11, color:C.slate, cursor:"pointer", fontFamily:"inherit" }}>Edit</button>}
+                <div style={{ flex:1, fontSize:12, color:"var(--jv-color-heading)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{value}</div>
+                {action && <button onClick={action} className="jv-doc-card__edit">Edit</button>}
               </div>
             </div>
           ))}
-          <div style={{ padding:"10px 11px", background:C.tealLight, border:`1px solid ${C.teal}33`, borderRadius:8, fontSize:11, color:C.tealDark, lineHeight:1.5 }}>
+          <div className="jv-info-banner">
             Use the Layers panel on the left to add, hide, and reorder sections. Click a block on the resume to edit it here.
           </div>
         </div>
