@@ -2,6 +2,8 @@
 import { supabase } from "../supabaseClient";
 import { C, DEFAULT_SECTIONS, EMPTY_USER, FONT_PRESETS, HEADER_LAYOUTS } from "../constants/appConstants.js";
 import { Btn } from "../components/ui.jsx";
+import { Settings2, LayoutTemplate, IdCard, Type, Palette, Sparkles, Eye, Download, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import "./BuilderToolbar.css";
 import { edgeFetch } from "../lib/edgeFetch.js";
 import { normalizeResumeTemplate } from "../resume-templates/normalizeResumeTemplate.js";
 import { HeaderRenderer } from "../resume-templates/renderers/HeaderRenderer.jsx";
@@ -873,26 +875,26 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     <div className="jobvair-builder-shell" style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 60px)", overflow:"hidden", margin:"-28px -32px", fontFamily:"inherit", width:"auto", maxWidth:"none", textAlign:"left" }}>
 
       {/* Top bar */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 20px", background:"#fff", borderBottom:`1px solid ${C.border}`, flexShrink:0, gap:8, flexWrap:"wrap" }}>
+      <div className="jv-builder-topbar">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <input value={resumeName} onChange={e=>setResumeName(e.target.value)} style={{ fontSize:15, fontWeight:700, color:C.navy, border:"none", background:"transparent", outline:"none", fontFamily:"inherit", borderBottom:`2px solid ${C.border}`, padding:"2px 0", minWidth:160 }} />
-          {saveState==="saved" && <span style={{ fontSize:11, color:C.success, fontWeight:600 }}>Saved</span>}
-          {saveState==="error" && <span style={{ fontSize:11, color:C.danger }}>Save failed</span>}
-          <div style={{ display:"flex", gap:4, padding:"3px", background:C.bg, borderRadius:999, border:`1px solid ${C.border}` }}>
-            <button onClick={()=>setBuilderMode("structured")} style={{ border:"none", borderRadius:999, padding:"5px 10px", background:builderMode==="structured"?C.teal:"transparent", color:builderMode==="structured"?"#fff":C.slate, fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>Structured</button>
-            <button onClick={()=>{ setBuilderMode("visual"); closeToolbarPanel(); setInspectorOpen(false); }} style={{ border:"none", borderRadius:999, padding:"5px 10px", background:builderMode==="visual"?C.teal:"transparent", color:builderMode==="visual"?"#fff":C.slate, fontSize:11, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>Visual Designer</button>
+          <input value={resumeName} onChange={e=>setResumeName(e.target.value)} className="jv-builder-name-input" />
+          {saveState==="saved" && <span className="jv-save-indicator jv-save-indicator--saved"><CheckCircle2 size={13} /> Saved</span>}
+          {saveState==="error" && <span className="jv-save-indicator jv-save-indicator--error"><AlertCircle size={13} /> Save failed</span>}
+          <div className="jv-mode-switch">
+            <button onClick={()=>setBuilderMode("structured")} className={`jv-mode-switch__btn${builderMode==="structured"?" jv-mode-switch__btn--active":""}`}>Structured</button>
+            <button onClick={()=>{ setBuilderMode("visual"); closeToolbarPanel(); setInspectorOpen(false); }} className={`jv-mode-switch__btn${builderMode==="visual"?" jv-mode-switch__btn--active":""}`}>Visual Designer</button>
           </div>
         </div>
         {builderMode === "structured" ? (
           <div style={{ display:"flex", gap:4, alignItems:"center" }}>
             {[
-              ["Document", showDocumentSettings, !activeSection && !activeToolbarPanel],
-              ["Template", () => setGalleryOpen(true), false],
-              ["Header",   () => selectSection("name", "header"), showHeaderPanel],
-              ["Font",     () => openToolbarPanel("fonts"), showFonts],
-              ["Design",   () => openToolbarPanel("design"), showDesign],
-            ].map(([label, handler, active]) => (
-              <button key={label} onClick={handler} style={{ padding:"6px 12px", borderRadius:7, border:`1px solid ${active?C.teal:C.border}`, background:active?C.tealLight:"transparent", fontSize:12, fontWeight:600, color:active?C.tealDark:C.slate, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s" }}>{label}</button>
+              ["Document", Settings2, showDocumentSettings, !activeSection && !activeToolbarPanel],
+              ["Template", LayoutTemplate, () => setGalleryOpen(true), false],
+              ["Header",   IdCard, () => selectSection("name", "header"), showHeaderPanel],
+              ["Font",     Type, () => openToolbarPanel("fonts"), showFonts],
+              ["Design",   Palette, () => openToolbarPanel("design"), showDesign],
+            ].map(([label, Icon, handler, active]) => (
+              <button key={label} onClick={handler} className={`jv-toolbar-btn${active?" jv-toolbar-btn--active":""}`}><Icon size={14} />{label}</button>
             ))}
           </div>
         ) : (
@@ -901,11 +903,13 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
           </div>
         )}
         {builderMode === "structured" ? (
-          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-            <Btn small variant="secondary" onClick={()=>setAssistantOpen(true)}>✨ Assistant</Btn>
-            <Btn small variant="secondary" onClick={enterPreviewMode}>Preview</Btn>
-            <Btn small variant="secondary" onClick={exportPDF}>PDF</Btn>
-            <Btn small disabled={saveState==="saving"} onClick={saveResume}>{saveState==="saving"?"Saving...":"Save"}</Btn>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <button className="jv-toolbar-action" onClick={()=>setAssistantOpen(true)}><Sparkles size={14} /> Assistant</button>
+            <button className="jv-toolbar-action" onClick={enterPreviewMode}><Eye size={14} /> Preview</button>
+            <button className="jv-toolbar-action" onClick={exportPDF}><Download size={14} /> PDF</button>
+            <button className="jv-toolbar-action jv-toolbar-action--primary" disabled={saveState==="saving"} onClick={saveResume}>
+              <Save size={14} /> {saveState==="saving"?"Saving...":"Save"}
+            </button>
           </div>
         ) : (
           <div style={{ display:"flex", gap:6, alignItems:"center", fontSize:11, color:C.textMuted }}>
