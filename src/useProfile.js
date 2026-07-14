@@ -247,20 +247,23 @@ export function useProfile() {
   const applyParsedResume = useCallback((parsed) => {
     if (!parsed) return;
 
-    // Update basic profile fields — always update from parsed data (fresh parse should win)
+    // Update basic profile fields — never overwrite something the candidate already
+    // has; only fill in fields that are still empty. This matches the backend's
+    // own merge rule in persistResumeEnrichment(), so a second (or third) resume
+    // upload can't silently clobber data from an earlier upload or manual edit.
     setProfileForm(f => ({
       ...(f ?? EMPTY_FORM),
-      name:     parsed.full_name || f?.name     || "",
-      email:    parsed.email     || f?.email    || "",
-      phone:    parsed.phone     || f?.phone    || "",
-      location: parsed.location  || f?.location || "",
-      summary:  parsed.summary   || f?.summary  || "",
+      name:     f?.name     || parsed.full_name || "",
+      email:    f?.email    || parsed.email     || "",
+      phone:    f?.phone    || parsed.phone     || "",
+      location: f?.location || parsed.location  || "",
+      summary:  f?.summary  || parsed.summary   || "",
       // Experience totals from parse
-      totalYearsExperience: parsed.profile_update?.total_years_experience ?? f?.totalYearsExperience ?? "",
-      totalYearsLeadership: parsed.total_years_leadership ?? parsed.profile_update?.total_years_leadership ?? f?.totalYearsLeadership ?? "",
-      // Claude-enriched fields — only set if returned and not already set
-      industries:    (parsed.industries?.length    && !f?.industries?.length)    ? parsed.industries    : (f?.industries    ?? []),
-      desiredTitles: (parsed.desired_titles?.length && !f?.desiredTitles?.length) ? parsed.desired_titles : (f?.desiredTitles ?? []),
+      totalYearsExperience: f?.totalYearsExperience || parsed.profile_update?.total_years_experience || "",
+      totalYearsLeadership: f?.totalYearsLeadership || parsed.total_years_leadership || parsed.profile_update?.total_years_leadership || "",
+      // Claude-enriched fields — only set if not already present
+      industries:    (f?.industries?.length)    ? f.industries    : (parsed.industries    ?? []),
+      desiredTitles: (f?.desiredTitles?.length) ? f.desiredTitles : (parsed.desired_titles ?? []),
     }));
 
     // Skills — replace all resume_parsed skills with new ones, keep manual ones
