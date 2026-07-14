@@ -1196,12 +1196,6 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     </div>
   );
 }
-// AI Optimizer
-
-
-
-
-
 
 
 

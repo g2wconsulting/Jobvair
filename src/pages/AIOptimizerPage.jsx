@@ -96,7 +96,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
   if (loading) {
     return (
       <Page size="wide" className="jobvair-page">
-        <PageHeader title="AI Resume Optimizer" description="Select a resume and a job description to get AI-powered optimization." />
+        <PageHeader title="Resume Match" description="Select a resume and a job description to get AI-powered optimization." />
         <Card style={{ textAlign: "center", padding: "60px 24px" }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
             <Sparkles size={40} color="var(--jv-color-primary)" style={{ animation: "jv-pulse 1.5s ease-in-out infinite" }} />
@@ -226,7 +226,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
 
   return (
     <Page size="wide" className="jobvair-page">
-      <PageHeader title="AI Resume Optimizer" description="Select a resume and paste a job description to get AI-powered analysis." />
+      <PageHeader title="Resume Match" description="Select a resume and paste a job description to get AI-powered analysis." />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20 }}>
         <Card>

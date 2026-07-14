@@ -67,7 +67,7 @@ export default function DashboardPage({ user, onNav }) {
   const continueWorking = [
     { title: "Resume Builder", detail: "Update your targeted resume version", icon: FileText, nav: "builder", action: "Continue" },
     { title: "Cover Letter", detail: "Draft a tailored cover letter", icon: Send, nav: "cover-letter", action: "Create" },
-    { title: "AI Optimizer", detail: "Analyze a resume against a job target", icon: WandSparkles, nav: "ai-optimize", action: "Optimize" },
+    { title: "Resume Match", detail: "Analyze a resume against a job target", icon: WandSparkles, nav: "ai-optimize", action: "Optimize" },
   ];
 
   const resumeVersions = [
@@ -185,7 +185,7 @@ export default function DashboardPage({ user, onNav }) {
             <Section
               title="AI Recommendations"
               description="Highest-value moves Jobvair would prioritize next."
-              actions={<Button variant="ghost" size="sm" icon={ArrowRight} iconPosition="right" onClick={() => onNav("ai-optimize")}>See optimizer</Button>}
+              actions={<Button variant="ghost" size="sm" icon={ArrowRight} iconPosition="right" onClick={() => onNav("ai-optimize")}>See Resume Match</Button>}
             >
               <div className="recommendation-grid">
                 {recommendations.map((item) => {

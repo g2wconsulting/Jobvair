@@ -42,7 +42,7 @@ export const NAV = [
   { id:"profile",      label:"My Profile",     icon:"●" },
   { id:"resumes",      label:"Resumes",        icon:"▤" },
   { id:"builder",      label:"Resume Builder", icon:"✎" },
-  { id:"ai-optimize",  label:"AI Optimizer",   icon:"✦" },
+  { id:"ai-optimize",  label:"Resume Match",   icon:"✦" },
   { id:"cover-letter", label:"Cover Letter",   icon:"✉" },
   { id:"settings",     label:"Settings",       icon:"⚙" },
 ];
