@@ -44,3 +44,17 @@ Secrets required:
 
 - AI provider key, to confirm from live Supabase
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+## Deployment notes
+
+Implemented. Requires these Supabase function secrets:
+
+- `ANTHROPIC_API_KEY`
+- `SUPABASE_URL` / `SUPABASE_ANON_KEY` (usually already set automatically by Supabase)
+
+Deploy with `supabase functions deploy parse-resume`.
+
+PDF files are sent directly to Claude as a native document (no separate text-extraction
+step needed). DOCX files are extracted with `mammoth` before being sent as plain text.
+Legacy `.doc` (pre-2007 binary format) is not supported — the function returns a clear
+error asking the user to re-save as `.docx` or `.pdf`.
