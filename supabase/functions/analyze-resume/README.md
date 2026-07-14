@@ -53,3 +53,15 @@ Secrets required:
 
 - AI provider key, to confirm from live Supabase
 - `SUPABASE_SERVICE_ROLE_KEY` if persisting results server-side
+
+## Deployment notes
+
+Implemented. Requires the `ANTHROPIC_API_KEY` function secret (same one used by
+`builder-assistant` and `parse-resume` — no new secret needed if already set).
+
+Deploy with `supabase functions deploy analyze-resume`.
+
+Verifies the caller's JWT and, when a `resume_id` is provided, confirms the resume
+belongs to the authenticated user before analyzing it. Persists every run to
+`public.ai_analyses` (this is what should eventually back the History page instead
+of its current seed/mock data).
