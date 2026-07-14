@@ -21,18 +21,23 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [jobDesc, setJobDesc] = useState("");
+  const [jobUrl, setJobUrl] = useState("");
   const [selectedResume, setSelectedResume] = useState("");
   const [inputMode, setInputMode] = useState("paste");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [buildingTailored, setBuildingTailored] = useState(false);
   const [buildError, setBuildError] = useState(null);
+  const [applyingSummary, setApplyingSummary] = useState(false);
+  const [summaryApplied, setSummaryApplied] = useState(false);
+  const [applyingBullets, setApplyingBullets] = useState(false);
+  const [bulletsApplied, setBulletsApplied] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
   const [serverError, setServerError] = useState(null);
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase.from("resumes").select("id, name, is_primary, template, updated_at")
+    supabase.from("resumes").select("id, name, is_primary, template, selected_template_id, contact_fields, updated_at")
       .eq("user_id", user.id).order("updated_at", { ascending: false })
       .then(({ data }) => {
         const rs = data || [];
@@ -97,7 +102,8 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
 
   const buildTailoredResume = async () => {
     const base = resumes.find(r => r.id === selectedResume);
-    if (!base || !result) return;
+    if (!base) { setBuildError("Select a resume first."); return; }
+    if (!result) { setBuildError("Run an analysis first."); return; }
 
     setBuildingTailored(true);
     setBuildError(null);
@@ -163,11 +169,69 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
         if (error) throw error;
       }
 
-      onNav?.("builder");
+      if (typeof onNav !== "function") {
+        throw new Error("Navigation isn't wired up — the tailored resume was created, but couldn't open the Builder automatically.");
+      }
+      onNav("builder");
     } catch (err) {
       setBuildError(err.message || "Couldn't create the tailored resume. Please try again.");
     } finally {
       setBuildingTailored(false);
+    }
+  };
+
+  // ── Apply an individual recommendation directly to the currently selected
+  // resume, in place, rather than creating a whole new copy. ──────────────────
+  const applySummary = async () => {
+    if (!result?.rewritten_professional_summary || !selectedResume) return;
+    setApplyingSummary(true);
+    setBuildError(null);
+    try {
+      const { data: existing, error: findErr } = await supabase
+        .from("resume_sections").select("id").eq("resume_id", selectedResume).eq("section_type", "summary").maybeSingle();
+      if (findErr) throw findErr;
+
+      if (existing) {
+        const { error } = await supabase.from("resume_sections")
+          .update({ content: { text: result.rewritten_professional_summary }, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("resume_sections").insert({
+          resume_id: selectedResume, user_id: user.id, section_type: "summary", label: "Professional Summary",
+          content: { text: result.rewritten_professional_summary }, display_order: 1, is_visible: true, is_required: false,
+        });
+        if (error) throw error;
+      }
+      setSummaryApplied(true);
+    } catch (err) {
+      setBuildError(err.message || "Couldn't apply the summary. Please try again.");
+    } finally {
+      setApplyingSummary(false);
+    }
+  };
+
+  const applyBullets = async () => {
+    if (!result?.rewritten_experience_bullets?.length || !selectedResume) return;
+    setApplyingBullets(true);
+    setBuildError(null);
+    try {
+      const { data: jobs, error: findErr } = await supabase
+        .from("work_experience_entries").select("id").eq("resume_id", selectedResume).order("display_order").limit(1);
+      if (findErr) throw findErr;
+      if (!jobs?.length) {
+        setBuildError("This resume doesn't have any work experience entries yet to apply bullet points to.");
+        return;
+      }
+      const { error } = await supabase.from("work_experience_entries")
+        .update({ bullet_points: result.rewritten_experience_bullets, updated_at: new Date().toISOString() })
+        .eq("id", jobs[0].id);
+      if (error) throw error;
+      setBulletsApplied(true);
+    } catch (err) {
+      setBuildError(err.message || "Couldn't apply the bullet points. Please try again.");
+    } finally {
+      setApplyingBullets(false);
     }
   };
 
@@ -209,6 +273,9 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
           actions={
             <div style={{ display: "flex", gap: 8 }}>
               <Button variant="secondary" size="sm" icon={ArrowLeft} onClick={reset}>New Analysis</Button>
+              {(summaryApplied || bulletsApplied) && (
+                <Button variant="secondary" size="sm" icon={PenTool} onClick={() => onNav?.("builder")}>Open in Builder</Button>
+              )}
               <Button size="sm" icon={PenTool} disabled={buildingTailored} onClick={buildTailoredResume}>
                 {buildingTailored ? "Building…" : "Build Tailored Resume"}
               </Button>
@@ -269,7 +336,12 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
             <p style={{ margin: "0 0 12px", fontSize: 14, color: "var(--jv-color-text)", lineHeight: 1.7, background: "var(--jv-color-teal-50)", padding: "12px 14px", borderRadius: "var(--jv-radius-sm)" }}>
               {result.rewritten_professional_summary}
             </p>
-            <Button size="sm" variant="secondary" icon={Copy} onClick={() => navigator.clipboard?.writeText(result.rewritten_professional_summary)}>Copy</Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button size="sm" variant="secondary" icon={Copy} onClick={() => navigator.clipboard?.writeText(result.rewritten_professional_summary)}>Copy</Button>
+              <Button size="sm" icon={summaryApplied ? Check : PenTool} disabled={applyingSummary} onClick={applySummary}>
+                {applyingSummary ? "Applying…" : summaryApplied ? "Applied ✓" : "Apply to My Resume"}
+              </Button>
+            </div>
           </Card>
 
           <Card>
@@ -284,11 +356,14 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
 
           <Card>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--jv-color-heading)", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><Sparkles size={14} color="var(--jv-color-primary)" /> Rewritten Experience Bullets</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
               {(result.rewritten_experience_bullets || []).map((b, i) => (
                 <div key={i} style={{ fontSize: 13, color: "var(--jv-color-text)", padding: "8px 12px", background: "var(--jv-color-slate-50)", borderRadius: "var(--jv-radius-xs)", borderLeft: "3px solid var(--jv-color-primary)", lineHeight: 1.55 }}>{b}</div>
               ))}
             </div>
+            <Button size="sm" icon={bulletsApplied ? Check : PenTool} disabled={applyingBullets} onClick={applyBullets}>
+              {applyingBullets ? "Applying…" : bulletsApplied ? "Applied ✓" : "Apply to Most Recent Job"}
+            </Button>
           </Card>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -374,7 +449,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
                 placeholder="Paste or type the key requirements and responsibilities…" />
             </>)}
             {inputMode === "url" && (<>
-              <Input label="Job Posting URL" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="https://jobs.company.com/..." />
+              <Input label="Job Posting URL" value={jobUrl} onChange={e => setJobUrl(e.target.value)} placeholder="https://jobs.company.com/..." />
               <Banner tone="warning" icon={Construction}>URL scraping coming soon. Use Paste JD for now.</Banner>
             </>)}
             {inputMode === "ats" && <Banner tone="info" icon={Construction}>ATS integration coming soon.</Banner>}
@@ -382,7 +457,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
         </Card>
       </div>
 
-      {inputMode !== "url" && (jobTitle.startsWith("http") || jobDesc.startsWith("http")) && (
+      {(jobTitle.startsWith("http") || jobDesc.startsWith("http")) && (
         <div style={{ marginTop: 16 }}>
           <Banner tone="warning" icon={AlertTriangle}>It looks like you pasted a URL. The AI cannot access URLs — please paste the actual job description text from the posting instead.</Banner>
         </div>
