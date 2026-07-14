@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { Plus, FileText, Paperclip, Star, Copy, Download, Trash2, Mail, Link as LinkIcon, ChevronDown } from "lucide-react";
+import { Plus, FileText, Paperclip, Star, Copy, Download, Trash2, Mail, Link as LinkIcon, ChevronDown, Upload, PenTool, X } from "lucide-react";
 import { Page, PageHeader, Card, Badge, Button, EmptyState, LoadingSkeleton } from "../components/ui/index.js";
+import ResumeUploadZone from "../components/ResumeUploadZone.jsx";
 
 function ResumeCard({ resume: r, template: tmpl, onEdit, onDuplicate, onSetPrimary, onDelete }) {
   const [exportOpen, setExportOpen] = useState(false);
@@ -59,10 +60,69 @@ function ResumeCard({ resume: r, template: tmpl, onEdit, onDuplicate, onSetPrima
   );
 }
 
+function AddResumeModal({ user, onClose, onBuildNew, onUploaded }) {
+  const [mode, setMode] = useState(null); // null | "upload"
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: "var(--jv-color-surface)", borderRadius: "var(--jv-radius-lg)", width: "100%", maxWidth: 520, boxShadow: "var(--jv-shadow-lg)", padding: 28 }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "var(--jv-color-heading)" }}>Add a Resume</h2>
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--jv-color-muted)" }}>Upload one you already have, or start fresh in the builder.</p>
+          </div>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--jv-color-muted)", padding: 4 }}><X size={18} /></button>
+        </div>
+
+        {mode === "upload" ? (
+          <ResumeUploadZone user={user} onParsed={async () => { await onUploaded(); }} />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <button
+              onClick={() => setMode("upload")}
+              style={{ border: "1.5px solid var(--jv-color-border)", borderRadius: "var(--jv-radius-md)", padding: "22px 16px", background: "var(--jv-color-slate-50)", cursor: "pointer", textAlign: "center", fontFamily: "inherit" }}
+            >
+              <Upload size={26} color="var(--jv-color-primary)" style={{ marginBottom: 10 }} />
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--jv-color-heading)", marginBottom: 4 }}>Upload Existing</div>
+              <div style={{ fontSize: 12, color: "var(--jv-color-muted)", lineHeight: 1.5 }}>PDF or DOCX — we'll parse it with AI and add it to your list</div>
+            </button>
+            <button
+              onClick={onBuildNew}
+              style={{ border: "1.5px solid var(--jv-color-border)", borderRadius: "var(--jv-radius-md)", padding: "22px 16px", background: "var(--jv-color-slate-50)", cursor: "pointer", textAlign: "center", fontFamily: "inherit" }}
+            >
+              <PenTool size={26} color="var(--jv-color-primary)" style={{ marginBottom: 10 }} />
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--jv-color-heading)", marginBottom: 4 }}>Build From Scratch</div>
+              <div style={{ fontSize: 12, color: "var(--jv-color-muted)", lineHeight: 1.5 }}>Start with a blank or templated resume in the builder</div>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ResumesPage({ onNav, user }) {
   const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dbTemplates, setDbTemplates] = useState([]);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+
+  const refreshResumes = async () => {
+    if (!user?.id) return;
+    const { data, error } = await supabase
+      .from("resumes")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (error) console.error("[ResumesPage]", error.message);
+    else setResumes(data || []);
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -107,8 +167,17 @@ export default function ResumesPage({ onNav, user }) {
       <PageHeader
         title="My Resumes"
         description="Manage your resume versions. Mark one as primary for AI analysis."
-        actions={<Button icon={Plus} onClick={() => onNav("builder")}>New Resume</Button>}
+        actions={<Button icon={Plus} onClick={() => setAddModalOpen(true)}>Add Resume</Button>}
       />
+
+      {addModalOpen && (
+        <AddResumeModal
+          user={user}
+          onClose={() => setAddModalOpen(false)}
+          onBuildNew={() => { setAddModalOpen(false); onNav("builder"); }}
+          onUploaded={async () => { await refreshResumes(); setAddModalOpen(false); }}
+        />
+      )}
 
       {loading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 20 }}>
@@ -120,9 +189,9 @@ export default function ResumesPage({ onNav, user }) {
         <EmptyState
           icon={FileText}
           title="No resumes yet"
-          description="Create your first resume to get started with AI-powered tailoring and optimization."
-          actionLabel="Create Resume"
-          onAction={() => onNav("builder")}
+          description="Upload a resume you already have, or build one from scratch."
+          actionLabel="Add Resume"
+          onAction={() => setAddModalOpen(true)}
         />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 20 }}>
@@ -141,11 +210,11 @@ export default function ResumesPage({ onNav, user }) {
             );
           })}
           <div
-            onClick={() => onNav("builder")}
+            onClick={() => setAddModalOpen(true)}
             style={{ border: "2px dashed var(--jv-color-border-strong)", borderRadius: "var(--jv-radius-lg)", padding: "40px 24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--jv-color-muted)", minHeight: 200, gap: 8 }}
           >
             <Plus size={28} />
-            <div style={{ fontSize: 14, fontWeight: 650 }}>Create New Resume</div>
+            <div style={{ fontSize: 14, fontWeight: 650 }}>Add Resume</div>
           </div>
         </div>
       )}
