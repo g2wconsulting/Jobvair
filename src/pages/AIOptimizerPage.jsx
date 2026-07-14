@@ -71,15 +71,20 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
       totalYearsExperience: profile.totalYearsExperience, highestEducationLevel: profile.highestEducationLevel,
     },
     skills: skills.map(s => ({ name: s.skill_name, level: s.proficiency_level, years: s.years_experience })),
-    job_description: jobDesc.trim() || `Role: ${jobTitle.trim()}`,
+    job_description: inputMode === "url" ? undefined : (jobDesc.trim() || `Role: ${jobTitle.trim()}`),
+    job_url: inputMode === "url" ? jobUrl.trim() : undefined,
     job_title: jobTitle || undefined,
     company: company || undefined,
   });
 
   const validate = () => {
     const errs = [];
-    if (!jobDesc.trim() && !jobTitle.trim()) errs.push("Paste a job description or enter a job title before running the analysis.");
-    if (jobDesc.trim().length > 0 && jobDesc.trim().length < 10) errs.push("Job description is too short — paste the full job posting.");
+    if (inputMode === "url") {
+      if (!jobUrl.trim()) errs.push("Enter a job posting URL before running the analysis.");
+    } else {
+      if (!jobDesc.trim() && !jobTitle.trim()) errs.push("Paste a job description or enter a job title before running the analysis.");
+      if (jobDesc.trim().length > 0 && jobDesc.trim().length < 10) errs.push("Job description is too short — paste the full job posting.");
+    }
     if (!selectedResume) errs.push("Please select a resume to analyze.");
     return errs;
   };
@@ -450,7 +455,9 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
             </>)}
             {inputMode === "url" && (<>
               <Input label="Job Posting URL" value={jobUrl} onChange={e => setJobUrl(e.target.value)} placeholder="https://jobs.company.com/..." />
-              <Banner tone="warning" icon={Construction}>URL scraping coming soon. Use Paste JD for now.</Banner>
+              <Input label="Job Title (optional)" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Senior Software Engineer" />
+              <Input label="Company (optional)" value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g. Stripe" />
+              <Banner tone="info" icon={Construction}>We'll fetch and read this page automatically. Some sites (ones that require login or heavy JavaScript to load) can't be read this way — if that happens, switch to Paste JD instead.</Banner>
             </>)}
             {inputMode === "ats" && <Banner tone="info" icon={Construction}>ATS integration coming soon.</Banner>}
           </div>

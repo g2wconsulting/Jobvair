@@ -14,7 +14,10 @@ const ANALYSIS_SYSTEM_PROMPT = `You are an expert resume reviewer and recruiter 
 well their resume matches a specific job, and how to improve it.
 
 You will receive the candidate's resume content, profile details, skills, and a target
-job description (or just a job title if no full description was provided).
+job description (or just a job title if no full description was provided). The job
+description may sometimes be raw extracted text from a scraped job posting webpage,
+which can include unrelated site navigation, footer text, or boilerplate — focus on
+identifying and using only the actual job posting content within it.
 
 Respond with ONLY a single JSON object matching this exact shape, and nothing else
 (no markdown fences, no preamble, no commentary):
@@ -41,6 +44,74 @@ Rules:
 function extractJson(rawText) {
   const cleaned = rawText.replace(/^```json\s*|```$/g, "").trim();
   return JSON.parse(cleaned);
+}
+
+function htmlToText(html) {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function fetchJobDescriptionFromUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("That doesn't look like a valid URL. Please check it and try again.");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Only http/https URLs are supported.");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  let res;
+  try {
+    res = await fetch(parsed.toString(), {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; JobvairBot/1.0; +https://jobvair.com)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+    });
+  } catch (err) {
+    throw new Error(`Couldn't reach that URL (${err instanceof Error ? err.message : "network error"}). Please paste the job description text directly instead.`);
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!res.ok) {
+    throw new Error(`That page returned an error (HTTP ${res.status}). It may require a login or block automated access — please paste the job description text directly instead.`);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("html") && !contentType.includes("text")) {
+    throw new Error("That URL didn't return a readable web page. Please paste the job description text directly instead.");
+  }
+
+  const html = await res.text();
+  const text = htmlToText(html);
+  if (!text || text.length < 100) {
+    throw new Error("Couldn't find readable content on that page (it may require JavaScript to load, or block automated access). Please paste the job description text directly instead.");
+  }
+
+  // Cap length to keep prompt size/cost reasonable — the system prompt is
+  // built to find the actual job posting within a noisy full-page extract.
+  return text.slice(0, 20000);
 }
 
 async function callAnthropic(payload) {
@@ -121,6 +192,18 @@ Deno.serve(async request => {
       .maybeSingle();
     if (resumeError || !resumeRow || resumeRow.user_id !== authedUserId) {
       return Response.json({ error: "Resume not found or not owned by the authenticated user." }, { status: 403, headers: corsHeaders });
+    }
+  }
+
+  // If a job posting URL was provided instead of pasted text, fetch and
+  // extract it server-side (arbitrary third-party fetches from the browser
+  // would be blocked by CORS almost everywhere, so this has to happen here).
+  if (body?.job_url && !body?.job_description) {
+    try {
+      body.job_description = await fetchJobDescriptionFromUrl(body.job_url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return Response.json({ error: message }, { status: 422, headers: corsHeaders });
     }
   }
 

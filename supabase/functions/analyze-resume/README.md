@@ -65,3 +65,11 @@ Verifies the caller's JWT and, when a `resume_id` is provided, confirms the resu
 belongs to the authenticated user before analyzing it. Persists every run to
 `public.ai_analyses` (this is what should eventually back the History page instead
 of its current seed/mock data).
+
+Also accepts an optional `job_url` field: if present (and `job_description` isn't),
+the function fetches that URL server-side, strips it down to plain text, and uses
+that as the job description. This has to happen server-side since arbitrary
+third-party fetches from the browser would be blocked by CORS almost everywhere.
+Sites that require login or heavy client-side JavaScript to render their content
+won't work this way — the function returns a clear error telling the user to paste
+the description text directly instead.
