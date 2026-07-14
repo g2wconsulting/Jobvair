@@ -291,7 +291,7 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
         </Card>
       </div>
 
-      {(jobTitle.startsWith("http") || jobDesc.startsWith("http")) && (
+      {inputMode !== "url" && (jobTitle.startsWith("http") || jobDesc.startsWith("http")) && (
         <div style={{ marginTop: 16 }}>
           <Banner tone="warning" icon={AlertTriangle}>It looks like you pasted a URL. The AI cannot access URLs — please paste the actual job description text from the posting instead.</Banner>
         </div>
