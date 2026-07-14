@@ -4,13 +4,13 @@ import { EMPTY_USER } from "../constants/appConstants.js";
 import { Page, PageHeader, Card, Badge, Button, TextArea, Input, Banner } from "../components/ui/index.js";
 import {
   Sparkles, ArrowLeft, Check, X, ArrowUpRight, KeyRound, TrendingUp, Rocket,
-  Copy, AlertTriangle, Construction,
+  Copy, AlertTriangle, Construction, PenTool,
 } from "lucide-react";
 import { edgeFetch } from "../lib/edgeFetch.js";
 
 const scoreColorVar = (score) => score >= 80 ? "var(--jv-color-success-600)" : score >= 60 ? "var(--jv-color-warning-600)" : "var(--jv-color-danger-600)";
 
-export default function AIOptimizerPage({ profileForm, profileSkills, profileWork, profileEdu, user }) {
+export default function AIOptimizerPage({ profileForm, profileSkills, profileWork, profileEdu, user, onNav }) {
   const profile = profileForm || EMPTY_USER;
   const skills = profileSkills || [];
   const work = profileWork || [];
@@ -25,6 +25,8 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
   const [inputMode, setInputMode] = useState("paste");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [buildingTailored, setBuildingTailored] = useState(false);
+  const [buildError, setBuildError] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
   const [serverError, setServerError] = useState(null);
 
@@ -93,6 +95,82 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
 
   const reset = () => { setResult(null); setServerError(null); setValidationErrors([]); };
 
+  const buildTailoredResume = async () => {
+    const base = resumes.find(r => r.id === selectedResume);
+    if (!base || !result) return;
+
+    setBuildingTailored(true);
+    setBuildError(null);
+    try {
+      const [{ data: baseSections, error: secErr }, { data: baseJobs, error: jobErr }] = await Promise.all([
+        supabase.from("resume_sections").select("*").eq("resume_id", base.id).order("display_order"),
+        supabase.from("work_experience_entries").select("*").eq("resume_id", base.id).order("display_order"),
+      ]);
+      if (secErr) throw secErr;
+      if (jobErr) throw jobErr;
+
+      const tailoredName = `${base.name} — Tailored${jobTitle ? ` for ${jobTitle}` : ""}`;
+
+      const { data: newResume, error: resumeError } = await supabase.from("resumes").insert({
+        user_id: user.id,
+        name: tailoredName,
+        template: base.template,
+        selected_template_id: base.selected_template_id,
+        is_primary: false,
+        contact_fields: base.contact_fields || {},
+        sections: [],
+      }).select().single();
+      if (resumeError) throw resumeError;
+
+      const newSections = (baseSections || []).map(s => {
+        const isSummary = s.section_type === "summary";
+        return {
+          resume_id: newResume.id,
+          user_id: user.id,
+          section_type: s.section_type,
+          label: s.label,
+          content: (isSummary && result.rewritten_professional_summary) ? { text: result.rewritten_professional_summary } : s.content,
+          display_order: s.display_order,
+          is_visible: s.is_visible,
+          is_required: s.is_required,
+          layout_config_json: s.layout_config_json,
+        };
+      });
+      if (newSections.length) {
+        const { error } = await supabase.from("resume_sections").insert(newSections);
+        if (error) throw error;
+      }
+
+      const newJobs = (baseJobs || []).map((j, i) => ({
+        user_id: user.id,
+        resume_id: newResume.id,
+        job_title: j.job_title,
+        company: j.company,
+        location: j.location,
+        start_date: j.start_date,
+        end_date: j.end_date,
+        is_current: j.is_current,
+        description: j.description,
+        bullet_points: (i === 0 && result.rewritten_experience_bullets?.length) ? result.rewritten_experience_bullets : j.bullet_points,
+        skills_used: j.skills_used,
+        achievements: j.achievements,
+        display_order: j.display_order,
+        is_visible: j.is_visible,
+        source: j.source,
+      }));
+      if (newJobs.length) {
+        const { error } = await supabase.from("work_experience_entries").insert(newJobs);
+        if (error) throw error;
+      }
+
+      onNav?.("builder");
+    } catch (err) {
+      setBuildError(err.message || "Couldn't create the tailored resume. Please try again.");
+    } finally {
+      setBuildingTailored(false);
+    }
+  };
+
   if (loading) {
     return (
       <Page size="wide" className="jobvair-page">
@@ -128,8 +206,21 @@ export default function AIOptimizerPage({ profileForm, profileSkills, profileWor
         <PageHeader
           title="Analysis Results"
           description={<>{jobTitle || "Job"}{company ? ` at ${company}` : ""}{result.is_mock && <span style={{ marginLeft: 8 }}><Badge tone="warning">Demo data — connect API key for real results</Badge></span>}</>}
-          actions={<Button variant="secondary" size="sm" icon={ArrowLeft} onClick={reset}>New Analysis</Button>}
+          actions={
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="secondary" size="sm" icon={ArrowLeft} onClick={reset}>New Analysis</Button>
+              <Button size="sm" icon={PenTool} disabled={buildingTailored} onClick={buildTailoredResume}>
+                {buildingTailored ? "Building…" : "Build Tailored Resume"}
+              </Button>
+            </div>
+          }
         />
+
+        {buildError && (
+          <div style={{ marginBottom: 20 }}>
+            <Banner tone="danger" icon={AlertTriangle}>{buildError}</Banner>
+          </div>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 20, marginBottom: 20 }}>
           <Card style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>

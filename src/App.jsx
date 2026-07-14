@@ -266,6 +266,7 @@ export default function App() {
               profileWork={profileWork}
               profileEdu={profileEdu}
               user={user}
+              onNav={setPage}
             />
           )}
           {page === "cover-letter" && (
