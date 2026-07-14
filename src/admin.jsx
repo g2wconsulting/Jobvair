@@ -1,15 +1,32 @@
 /**
  * admin.jsx — Jobvair Admin Panel
- * 
- * Separate entry point from the candidate app.
- * Place at: src/admin.jsx
- * Add to vite.config.js as a second input (or just swap main.jsx temporarily).
- * 
+ *
+ * Loaded dynamically from src/main.jsx when the URL path or query string
+ * contains "admin" (see vercel.json's /admin rewrite to /index.html, which
+ * makes that check see a matching path). Not a separate Vite build entry.
+ *
  * Access: /admin — only visible to users in the admin_users table.
+ *
+ * The admin's own account gets Resume Builder, Resume Match, and Cover
+ * Letter as general-purpose tools (same components the candidate app uses),
+ * without a Profile page — this is a master account, not a candidate
+ * profile, so there's nothing to build a "profile" out of. Resumes created
+ * here are scoped to the admin's own auth user id via the same RLS policies
+ * candidates use; nothing here can read or edit another user's data.
  */
 
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { EMPTY_USER } from "./constants/appConstants.js";
+import BuilderPage from "./pages/BuilderPage.jsx";
+import AIOptimizerPage from "./pages/AIOptimizerPage.jsx";
+import CoverLetterPage from "./pages/CoverLetterPage.jsx";
+
+// A blank stand-in profile — the admin account has no candidate profile,
+// so the builder/match/cover-letter tools just start from nothing instead
+// of pre-filling from profile data the way the candidate app does.
+const ADMIN_EMPTY_PROFILE = EMPTY_USER;
+const ADMIN_EMPTY_LIST = [];
 
 // ── Design tokens ─────────────────────────────────────────────────────────
 const A = {
@@ -728,6 +745,9 @@ const NAV = [
   { id: "users",         icon: "◉", label: "Users" },
   { id: "subscriptions", icon: "◎", label: "Subscriptions" },
   { id: "templates",     icon: "◫", label: "Templates" },
+  { id: "builder",       icon: "✎", label: "Resume Builder" },
+  { id: "ai-optimize",   icon: "✦", label: "Resume Match" },
+  { id: "cover-letter",  icon: "✉", label: "Cover Letter" },
 ];
 
 function Sidebar({ active, onNav, adminUser, onLogout }) {
@@ -809,6 +829,32 @@ export default function AdminApp() {
         {page === "users"         && <UsersPage />}
         {page === "subscriptions" && <SubscriptionsPage />}
         {page === "templates"     && <TemplatesPage adminUser={adminUser} />}
+        {page === "builder" && (
+          <BuilderPage
+            user={authUser}
+            profileForm={ADMIN_EMPTY_PROFILE}
+            profileSkills={ADMIN_EMPTY_LIST}
+            profileWork={ADMIN_EMPTY_LIST}
+            profileEdu={ADMIN_EMPTY_LIST}
+          />
+        )}
+        {page === "ai-optimize" && (
+          <AIOptimizerPage
+            user={authUser}
+            profileForm={ADMIN_EMPTY_PROFILE}
+            profileSkills={ADMIN_EMPTY_LIST}
+            profileWork={ADMIN_EMPTY_LIST}
+            profileEdu={ADMIN_EMPTY_LIST}
+            onNav={setPage}
+          />
+        )}
+        {page === "cover-letter" && (
+          <CoverLetterPage
+            profileForm={ADMIN_EMPTY_PROFILE}
+            profileSkills={ADMIN_EMPTY_LIST}
+            profileWork={ADMIN_EMPTY_LIST}
+          />
+        )}
       </div>
     </div>
   );

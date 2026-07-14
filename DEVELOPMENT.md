@@ -18,11 +18,10 @@ Core stack:
 
 Important entry points:
 
-- `index.html` loads `src/main.jsx`.
-- `admin.html` loads `src/admin-main.jsx`.
-- `src/main.jsx` dynamically routes to `src/admin.jsx` when the URL path or query contains `admin`; otherwise it loads `src/App.jsx`.
+- `index.html` loads `src/main.jsx`, which serves both the candidate app and the admin console from a single entry point.
+- `src/main.jsx` dynamically routes to `src/admin.jsx` when the URL path or query contains `admin` (see `vercel.json`'s `/admin` rewrite to `/index.html`); otherwise it loads `src/App.jsx`.
 - `src/App.jsx` contains the candidate-facing app shell and most page implementations.
-- `src/admin.jsx` contains the admin console.
+- `src/admin.jsx` contains the admin console. It reuses the candidate app's Resume Builder, Resume Match, and Cover Letter pages directly (passing the admin's own auth user, with no Profile page since it's a master account, not a candidate profile).
 - `src/supabaseClient.js` creates the browser Supabase client.
 - `src/useProfile.js` loads, maps, saves, and merges profile data.
 
@@ -271,13 +270,7 @@ Current AI provider status:
 Known issues from inspection and local verification:
 
 - `src/App.jsx` is very large and contains many unrelated domains in one file.
-- `src/admin.jsx` and `src/admin-main.jsx` appear to duplicate admin implementation concerns.
-- `supabase/functions` contains README contracts only; actual function source is missing.
 - `supabase/migrations` are draft stabilization files and may not match production.
-- `docs/` and `supabase/` are currently untracked in git.
-- `npm.cmd run build` succeeds, but `npm.cmd run lint` fails.
-- Lint reports undefined `setBuilderSections` and `setBuilderContactFields` in the logout flow.
-- The builder references `contactFields` during resume creation, but the live state appears to be `headerConfig`.
 - Some values are unused or stale, including `ResumeDocument`, `SEED_RESUMES`, some admin imports, and unused Supabase env reads in the upload zone.
 - Some React lint rules flag components declared inside render functions and direct state updates in effects.
 - Stripe price ids have frontend fallbacks. These should eventually be removed after environment handling is stable.
