@@ -18,7 +18,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { EMPTY_USER } from "./constants/appConstants.js";
-import BuilderPage from "./pages/BuilderPage.jsx";
+import AdminResumeStudio from "./admin/AdminResumeStudio.jsx";
 import AIOptimizerPage from "./pages/AIOptimizerPage.jsx";
 import CoverLetterPage from "./pages/CoverLetterPage.jsx";
 
@@ -829,15 +829,7 @@ export default function AdminApp() {
         {page === "users"         && <UsersPage />}
         {page === "subscriptions" && <SubscriptionsPage />}
         {page === "templates"     && <TemplatesPage adminUser={adminUser} />}
-        {page === "builder" && (
-          <BuilderPage
-            user={authUser}
-            profileForm={ADMIN_EMPTY_PROFILE}
-            profileSkills={ADMIN_EMPTY_LIST}
-            profileWork={ADMIN_EMPTY_LIST}
-            profileEdu={ADMIN_EMPTY_LIST}
-          />
-        )}
+        {page === "builder" && <AdminResumeStudio user={authUser} />}
         {page === "ai-optimize" && (
           <AIOptimizerPage
             user={authUser}
