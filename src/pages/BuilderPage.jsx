@@ -379,6 +379,25 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
     }).from(previewRef.current).save();
   };
 
+  const exportDocx = () => {
+    if (!previewRef.current) return;
+    const contentHtml = previewRef.current.innerHTML;
+    const html = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8">
+<style>
+  @page { size: 8.5in 11in; margin: 0; }
+  body { margin: 0; font-family: ${fontFamily}; color: #1E293B; }
+  .jobvair-pdf-page { page-break-after: always; }
+</style>
+</head>
+<body>${contentHtml}</body></html>`;
+    const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${resumeName.replace(/\s+/g, "_")}.doc`;
+    a.click();
+  };
+
   // File import
   const processFile = async (file) => {
     if (!file || !file.name.match(/\.(pdf|docx|doc|txt)$/i)) { setParseError("Please upload a PDF, DOCX, or plain text file."); return; }
@@ -716,6 +735,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
         <div style={{ fontSize:13, fontWeight:600, color:"#94A3B8" }}>Preview - {resumeName}</div>
         <div style={{ display:"flex", gap:8 }}>
           <Button size="sm" variant="secondary" onClick={exportPDF}>Export PDF</Button>
+          <Button size="sm" variant="secondary" onClick={exportDocx}>Export Word</Button>
           <Button size="sm" onClick={() => setPreviewMode(false)}>Back to Editor</Button>
         </div>
       </div>
@@ -912,6 +932,7 @@ export default function BuilderPage({ profileForm, profileSkills, profileWork, p
             <button className="jv-toolbar-action" onClick={()=>setAssistantOpen(true)}><Sparkles size={14} /> Assistant</button>
             <button className="jv-toolbar-action" onClick={enterPreviewMode}><Eye size={14} /> Preview</button>
             <button className="jv-toolbar-action" onClick={exportPDF}><Download size={14} /> PDF</button>
+            <button className="jv-toolbar-action" onClick={exportDocx}><Download size={14} /> Word</button>
             <button className="jv-toolbar-action jv-toolbar-action--primary" disabled={saveState==="saving"} onClick={saveResume}>
               <Save size={14} /> {saveState==="saving"?"Saving...":"Save"}
             </button>

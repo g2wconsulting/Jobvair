@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { edgeFetch } from "../lib/edgeFetch.js";
+import { DEFAULT_SECTIONS } from "../constants/appConstants.js";
 import { LOCAL_RESUME_TEMPLATES } from "../resume-templates/templateRegistry.js";
 import BuilderPage from "../pages/BuilderPage.jsx";
 
@@ -152,14 +153,27 @@ export default function AdminResumeStudio({ user }) {
       }).select().single();
       if (resumeError) throw new Error(`Couldn't create the resume: ${resumeError.message}`);
 
-      const sections = [
-        { section_type: "name", label: "Name & Contact", content: {}, display_order: 0, is_visible: true, is_required: true },
-        { section_type: "summary", label: "Professional Summary", content: { text: tailored?.rewritten_professional_summary || parsed.summary || "" }, display_order: 1, is_visible: true, is_required: false },
-        { section_type: "skills", label: "Skills", content: { text: skillsToText(parsed.skills) }, display_order: 2, is_visible: true, is_required: false },
-        { section_type: "experience", label: "Work Experience", content: { text: "" }, display_order: 3, is_visible: true, is_required: false },
-        { section_type: "education", label: "Education", content: { text: educationToText(parsed.education) }, display_order: 4, is_visible: true, is_required: false },
-        { section_type: "certifications", label: "Certifications", content: { text: certificationsToText(parsed.certifications) }, display_order: 5, is_visible: (parsed.certifications || []).length > 0, is_required: false },
-      ].map(s => ({ ...s, resume_id: newResume.id, user_id: user.id }));
+      // BuilderPage reads header/contact info from the "name" section's own
+      // content field, not from resumes.contact_fields (that column is only
+      // a legacy mirror) — so the actual header data has to live here, or
+      // the name/email/phone/location won't show up when the Builder loads.
+      const sectionTextByType = {
+        summary: tailored?.rewritten_professional_summary || parsed.summary || "",
+        skills: skillsToText(parsed.skills),
+        experience: "",
+        education: educationToText(parsed.education),
+        certifications: certificationsToText(parsed.certifications),
+      };
+      const sections = DEFAULT_SECTIONS.map(s => ({
+        resume_id: newResume.id,
+        user_id: user.id,
+        section_type: s.section_type,
+        label: s.label,
+        content: s.section_type === "name" ? contactFields : { text: sectionTextByType[s.section_type] ?? "" },
+        display_order: s.display_order,
+        is_visible: s.section_type === "certifications" ? (parsed.certifications || []).length > 0 : s.is_visible,
+        is_required: s.is_required,
+      }));
       const { error: sectionsError } = await supabase.from("resume_sections").insert(sections);
       if (sectionsError) throw new Error(`Couldn't save resume sections: ${sectionsError.message}`);
 
