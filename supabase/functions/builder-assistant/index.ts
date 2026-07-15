@@ -235,6 +235,15 @@ Rules:
 - Never invent employment history, dates, or credentials not present in the input.
 - Prefer small, targeted operations over rewriting entire sections.
 - Only mark "safe_to_apply": true for low-risk wording/formatting changes, never for factual claims.
+- Whenever "message" or a suggestion describes a specific rewritten sentence, paragraph, or
+  bullet point, you MUST ALSO include a matching entry in "patch.operations" that actually
+  applies that exact text — never describe a concrete rewrite in prose without also encoding
+  it as an operation the user can apply with one click. An empty "operations" array should
+  only happen when you are giving purely observational feedback with no specific rewrite to offer.
+- For "target", use the exact index of the section/job as it appears in the resume JSON you were
+  given, e.g. "sections[2].content" for the third section in the input's sections array, or
+  "jobs[0].bullet_points" for the first job. Match indices to the input you actually received —
+  do not guess or renumber.
 - Do not include anything outside the single JSON object.`;
 
 async function callAnthropic(payload: Record<string, unknown>) {
