@@ -75,7 +75,15 @@ Invalid payloads return HTTP `400` with a validation object.
 
 ## Deployment Notes
 
-When this moves beyond the mock phase:
+Implemented. Uses the shared AI Model Router (`supabase/functions/_shared/modelRouter.ts`
++ `aiRouterConfig.ts`) to pick a model for the `resume_rewriting` task and automatically
+escalate to a stronger model if the response is invalid, looks like a refusal, or has
+low confidence. Requires the `OPENAI_API_KEY` function secret (shared with parse-resume
+and analyze-resume) and `SUPABASE_SERVICE_ROLE_KEY` for run persistence.
+
+Deploy with `supabase functions deploy builder-assistant`.
+
+Additional principles this function follows:
 
 - keep the public response contract stable
 - validate authenticated user ownership before using resume data

@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import mammoth from "npm:mammoth@1.8.0";
 import { extractText, getDocumentProxy } from "npm:unpdf@0.11.0";
-import { callOpenAiJson, hasOpenAiKey } from "../_shared/openai.ts";
+import { generateAIResponse, hasOpenAiKey } from "../_shared/modelRouter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -138,10 +138,13 @@ Deno.serve(async request => {
       throw new Error("Unsupported file type. Please upload a PDF, DOCX, or TXT file.");
     }
 
-    const parsed = await callOpenAiJson(
-      EXTRACTION_SYSTEM_PROMPT,
-      `Resume text:\n\n${resumeText}\n\nExtract structured resume data from this, following the required JSON shape exactly.`,
-      3000,
+    const { data: parsed } = await generateAIResponse(
+      "resume_parsing",
+      {
+        system: EXTRACTION_SYSTEM_PROMPT,
+        user: `Resume text:\n\n${resumeText}\n\nExtract structured resume data from this, following the required JSON shape exactly.`,
+      },
+      { maxOutputTokens: 3000 },
     );
 
     await supabase.from("parsed_resumes").update({

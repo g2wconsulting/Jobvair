@@ -56,7 +56,7 @@ Secrets required:
 
 ## Deployment notes
 
-Implemented. Requires the `OPENAI_API_KEY` function secret (same one used by
+Implemented. Uses the shared AI Model Router (see `supabase/functions/_shared/modelRouter.ts` and `aiRouterConfig.ts`) to pick a model per task, with automatic escalation on failure. Requires the `OPENAI_API_KEY` function secret (same one used by
 `builder-assistant` and `parse-resume` — no new secret needed if already set).
 
 Deploy with `supabase functions deploy analyze-resume`.

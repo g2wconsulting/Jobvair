@@ -47,7 +47,10 @@ Secrets required:
 
 ## Deployment notes
 
-Implemented. Requires these Supabase function secrets:
+Implemented. Uses the shared AI Model Router (`supabase/functions/_shared/modelRouter.ts`
++ `aiRouterConfig.ts`) to pick a model for the `resume_parsing` task and automatically
+escalate to a stronger model if the response is invalid, looks like a refusal, or has
+low confidence. Requires these Supabase function secrets:
 
 - `OPENAI_API_KEY`
 - `SUPABASE_URL` / `SUPABASE_ANON_KEY` (usually already set automatically by Supabase)

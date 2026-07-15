@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { callOpenAiJson, hasOpenAiKey } from "../_shared/openai.ts";
+import { generateAIResponse, hasOpenAiKey } from "../_shared/modelRouter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -263,7 +263,12 @@ async function callAi(payload: Record<string, unknown>) {
     },
   });
 
-  return callOpenAiJson(ASSISTANT_SYSTEM_PROMPT, userContent, 2000);
+  const { data } = await generateAIResponse(
+    "resume_rewriting",
+    { system: ASSISTANT_SYSTEM_PROMPT, user: userContent },
+    { maxOutputTokens: 2000 },
+  );
+  return data;
 }
 
 // ── Run persistence (Phase 4) ───────────────────────────────────────────────

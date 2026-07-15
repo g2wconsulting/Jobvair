@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { callOpenAiJson, hasOpenAiKey } from "../_shared/openai.ts";
+import { generateAIResponse, hasOpenAiKey } from "../_shared/modelRouter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -119,7 +119,15 @@ async function callAi(payload) {
     job_description: payload.job_description || null,
   });
 
-  return callOpenAiJson(ANALYSIS_SYSTEM_PROMPT, userContent, 2500);
+  // This single call both scores the match AND rewrites the summary/bullets,
+  // so it doesn't map perfectly to one task bucket — "resume_scoring" is the
+  // closest fit since the match score/fit explanation is its primary output.
+  const { data } = await generateAIResponse(
+    "resume_scoring",
+    { system: ANALYSIS_SYSTEM_PROMPT, user: userContent },
+    { maxOutputTokens: 2500 },
+  );
+  return data;
 }
 
 Deno.serve(async request => {
