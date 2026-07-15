@@ -61,7 +61,7 @@ export default function AdminResumeStudio({ user }) {
 
   const statusLabel = {
     uploading: "Uploading resume…",
-    parsing: "Reading resume with AI…",
+    parsing: "Reading resume…",
     tailoring: "Tailoring to the job…",
     building: "Building the resume…",
   }[status];
