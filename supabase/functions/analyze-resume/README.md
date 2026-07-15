@@ -56,7 +56,7 @@ Secrets required:
 
 ## Deployment notes
 
-Implemented. Requires the `ANTHROPIC_API_KEY` function secret (same one used by
+Implemented. Requires the `OPENAI_API_KEY` function secret (same one used by
 `builder-assistant` and `parse-resume` — no new secret needed if already set).
 
 Deploy with `supabase functions deploy analyze-resume`.

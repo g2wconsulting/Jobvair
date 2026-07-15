@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { callOpenAiJson, hasOpenAiKey } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,6 @@ const ASSISTANT_RESPONSE_VERSION = "builder_assistant_response_v1";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 
 type ValidationIssue = {
   path: string;
@@ -246,7 +246,7 @@ Rules:
   do not guess or renumber.
 - Do not include anything outside the single JSON object.`;
 
-async function callAnthropic(payload: Record<string, unknown>) {
+async function callAi(payload: Record<string, unknown>) {
   const instruction = typeof payload.instruction === "string" ? payload.instruction : "";
   const jobDescription = typeof payload.job_description === "string" ? payload.job_description : "";
 
@@ -263,34 +263,7 @@ async function callAnthropic(payload: Record<string, unknown>) {
     },
   });
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      system: ASSISTANT_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Anthropic API error ${res.status}: ${text}`);
-  }
-
-  const data = await res.json();
-  const textBlock = Array.isArray(data.content)
-    ? data.content.find((block: Record<string, unknown>) => block.type === "text")
-    : null;
-  const rawText = textBlock?.text ?? "";
-
-  const cleaned = rawText.replace(/^```json\s*|```$/g, "").trim();
-  return JSON.parse(cleaned);
+  return callOpenAiJson(ASSISTANT_SYSTEM_PROMPT, userContent, 2000);
 }
 
 // ── Run persistence (Phase 4) ───────────────────────────────────────────────
@@ -410,7 +383,7 @@ Deno.serve(async request => {
     }
   }
 
-  if (!ANTHROPIC_API_KEY) {
+  if (!hasOpenAiKey()) {
     const mockResponse = createMockAssistantResponse(typedPayload);
     await persistRun({
       userId: authedUserId,
@@ -425,7 +398,7 @@ Deno.serve(async request => {
   }
 
   try {
-    const aiResponse = await callAnthropic(typedPayload);
+    const aiResponse = await callAi(typedPayload);
     await persistRun({
       userId: authedUserId,
       resumeId: (typedPayload.resume_id as string) ?? null,

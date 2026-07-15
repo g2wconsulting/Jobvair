@@ -49,7 +49,7 @@ Secrets required:
 
 Implemented. Requires these Supabase function secrets:
 
-- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
 - `SUPABASE_URL` / `SUPABASE_ANON_KEY` (usually already set automatically by Supabase)
 
 Deploy with `supabase functions deploy parse-resume`.

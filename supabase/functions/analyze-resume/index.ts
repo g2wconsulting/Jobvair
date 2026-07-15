@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { callOpenAiJson, hasOpenAiKey } from "../_shared/openai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 
 const ANALYSIS_SYSTEM_PROMPT = `You are an expert resume reviewer and recruiter helping a candidate understand how
 well their resume matches a specific job, and how to improve it.
@@ -40,11 +40,6 @@ Rules:
 - Base match_score on genuine alignment between the resume and the job description, not on wishful thinking.
 - If no real job description was provided (only a title), be explicit in job_fit_explanation that this is a general assessment for that role type.
 - Do not include anything outside the single JSON object.`;
-
-function extractJson(rawText) {
-  const cleaned = rawText.replace(/^```json\s*|```$/g, "").trim();
-  return JSON.parse(cleaned);
-}
 
 function htmlToText(html) {
   return html
@@ -114,7 +109,7 @@ async function fetchJobDescriptionFromUrl(url) {
   return text.slice(0, 20000);
 }
 
-async function callAnthropic(payload) {
+async function callAi(payload) {
   const userContent = JSON.stringify({
     resume_content: payload.resume_content || null,
     profile: payload.profile || {},
@@ -124,28 +119,7 @@ async function callAnthropic(payload) {
     job_description: payload.job_description || null,
   });
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2500,
-      system: ANALYSIS_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Anthropic API error ${res.status}: ${text}`);
-  }
-  const data = await res.json();
-  const textBlock = Array.isArray(data.content) ? data.content.find(b => b.type === "text") : null;
-  return extractJson(textBlock?.text ?? "");
+  return callOpenAiJson(ANALYSIS_SYSTEM_PROMPT, userContent, 2500);
 }
 
 Deno.serve(async request => {
@@ -211,12 +185,12 @@ Deno.serve(async request => {
     return Response.json({ error: "Provide either resume_content or at least a job_title to analyze." }, { status: 400, headers: corsHeaders });
   }
 
-  if (!ANTHROPIC_API_KEY) {
+  if (!hasOpenAiKey()) {
     return Response.json({ error: "Resume Match is not configured yet (missing AI provider key). Please contact support." }, { status: 503, headers: corsHeaders });
   }
 
   try {
-    const result = await callAnthropic(body);
+    const result = await callAi(body);
 
     const { error: insertError } = await supabase.from("ai_analyses").insert({
       user_id: authedUserId,
