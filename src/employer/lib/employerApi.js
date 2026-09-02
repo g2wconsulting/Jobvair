@@ -1,4 +1,5 @@
 import { supabase } from "../../supabaseClient";
+import { edgeFetch } from "../../lib/edgeFetch.js";
 
 // ── Companies & memberships ────────────────────────────────────────────────
 export async function getMyMemberships() {
@@ -43,19 +44,53 @@ export async function listHiringTeam(companyId) {
   return data || [];
 }
 
-export async function inviteEmployerMember(companyId, email, role) {
-  const { data, error } = await supabase.rpc("invite_employer_member", {
-    target_company_id: companyId,
-    member_email: email,
-    member_role: role,
-  });
-  if (error) throw error;
-  return data;
+// Invites someone by email — sends a real invite email for a brand-new
+// account, or attaches an existing Jobvair account directly. Requires the
+// invite-employer-member Edge Function (needs SUPABASE_SERVICE_ROLE_KEY).
+export async function inviteEmployerMemberByEmail(companyId, email, role) {
+  return edgeFetch("invite-employer-member", { companyId, email, role });
 }
 
 export async function updateMembership(membershipId, patch) {
   const { error } = await supabase.from("employer_memberships").update(patch).eq("id", membershipId);
   if (error) throw error;
+}
+
+export async function listPendingInvitations(companyId) {
+  const { data, error } = await supabase
+    .from("employer_invitations")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function revokeInvitation(invitationId) {
+  const { error } = await supabase.from("employer_invitations").update({ status: "revoked" }).eq("id", invitationId);
+  if (error) throw error;
+}
+
+// Called once per session after sign-in — turns a pending invitation
+// matching the signed-in user's verified email into a real membership.
+// Returns the company id if one was accepted, otherwise null.
+export async function acceptPendingInvitation() {
+  const { data, error } = await supabase.rpc("accept_pending_invitation");
+  if (error) throw error;
+  return data;
+}
+
+// ── Company logo ────────────────────────────────────────────────────────
+export async function uploadCompanyLogo(companyId, file) {
+  const ext = file.name.split(".").pop() || "png";
+  const path = `${companyId}/logo_${Date.now()}.${ext}`;
+  const { error: uploadError } = await supabase.storage.from("company-logos").upload(path, file, { upsert: true });
+  if (uploadError) throw uploadError;
+  const { data } = supabase.storage.from("company-logos").getPublicUrl(path);
+  const publicUrl = data.publicUrl;
+  await updateCompany(companyId, { logo_url: publicUrl });
+  return publicUrl;
 }
 
 // ── Jobs ────────────────────────────────────────────────────────────────

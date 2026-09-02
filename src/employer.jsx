@@ -11,7 +11,7 @@ import IntelligencePage from "./employer/pages/IntelligencePage.jsx";
 import CompanyPage from "./employer/pages/CompanyPage.jsx";
 import BillingPage from "./employer/pages/BillingPage.jsx";
 import EmployerSettingsPage from "./employer/pages/SettingsPage.jsx";
-import { getMyMemberships, createCompanyAndAdmin } from "./employer/lib/employerApi.js";
+import { getMyMemberships, createCompanyAndAdmin, acceptPendingInvitation } from "./employer/lib/employerApi.js";
 
 function CreateCompanyScreen({ onCreated }) {
   const [form, setForm] = useState({ name: "", website: "", industry: "", company_size: "", headquarters_location: "" });
@@ -64,7 +64,18 @@ export default function EmployerApp() {
   const loadMemberships = async () => {
     setMembershipsError("");
     try {
-      const rows = await getMyMemberships();
+      let rows = await getMyMemberships();
+      if (rows.length === 0) {
+        // No membership yet — maybe they just followed a hiring-team invite
+        // link. Try to redeem a pending invitation matching their email
+        // before falling back to "set up a new company".
+        try {
+          const acceptedCompanyId = await acceptPendingInvitation();
+          if (acceptedCompanyId) rows = await getMyMemberships();
+        } catch (inviteErr) {
+          console.error("[EmployerApp] acceptPendingInvitation error:", inviteErr);
+        }
+      }
       setActiveMembership(rows[0] || null);
       setMembershipsLoaded(true);
     } catch (err) {
@@ -135,7 +146,17 @@ export default function EmployerApp() {
           </div>
           <div className="jv-topbar__actions">
             <Badge tone="neutral">{activeMembership.role?.replace("_", " ")}</Badge>
-            <Avatar name={company?.name} size={32} />
+            <button
+              onClick={() => setPage("company")}
+              title="Manage company profile"
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", borderRadius: "50%", lineHeight: 0 }}
+            >
+              {company?.logo_url ? (
+                <img src={company.logo_url} alt={company.name} width={32} height={32} style={{ borderRadius: "50%", objectFit: "cover", display: "block" }} />
+              ) : (
+                <Avatar name={company?.name} size={32} />
+              )}
+            </button>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto" }}>
