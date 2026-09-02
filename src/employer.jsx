@@ -57,13 +57,21 @@ export default function EmployerApp() {
   const [authUser, setAuthUser] = useState(undefined);
   const [activeMembership, setActiveMembership] = useState(null);
   const [membershipsLoaded, setMembershipsLoaded] = useState(false);
+  const [membershipsError, setMembershipsError] = useState("");
   const [page, setPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
 
   const loadMemberships = async () => {
-    const rows = await getMyMemberships();
-    setActiveMembership(rows[0] || null);
-    setMembershipsLoaded(true);
+    setMembershipsError("");
+    try {
+      const rows = await getMyMemberships();
+      setActiveMembership(rows[0] || null);
+      setMembershipsLoaded(true);
+    } catch (err) {
+      console.error("[EmployerApp] loadMemberships error:", err);
+      setMembershipsError(err.message || "Failed to load your employer account.");
+      setMembershipsLoaded(true);
+    }
   };
 
   useEffect(() => {
@@ -92,6 +100,22 @@ export default function EmployerApp() {
 
   if (!membershipsLoaded) {
     return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--jv-color-muted)", fontFamily: "var(--jv-font-sans)" }}>Loading your company…</div>;
+  }
+
+  if (membershipsError) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "var(--jv-font-sans)" }}>
+        <div style={{ maxWidth: 480, textAlign: "center" }}>
+          <h2 style={{ color: "var(--jv-color-danger-600)", marginBottom: 8 }}>Couldn't load your employer account</h2>
+          <p style={{ color: "var(--jv-color-muted)", fontSize: 13, marginBottom: 16 }}>{membershipsError}</p>
+          <p style={{ color: "var(--jv-color-muted)", fontSize: 12, marginBottom: 16 }}>
+            This usually means the employer portal database migration hasn't been applied to this Supabase project yet.
+          </p>
+          <Button onClick={loadMemberships}>Try again</Button>
+          <Button variant="ghost" onClick={handleLogout} style={{ marginLeft: 8 }}>Sign out</Button>
+        </div>
+      </div>
+    );
   }
 
   if (!activeMembership) return <CreateCompanyScreen onCreated={loadMemberships} />;
