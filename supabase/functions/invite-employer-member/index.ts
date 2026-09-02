@@ -71,7 +71,12 @@ Deno.serve(async (request) => {
   }
 
   const { data: isAdmin, error: adminCheckError } = await callerClient.rpc("is_company_admin", { target_company_id: companyId });
-  if (adminCheckError || !isAdmin) {
+  if (adminCheckError) {
+    console.error("[invite-employer-member] is_company_admin RPC error:", adminCheckError);
+    return Response.json({ error: `Could not verify admin status: ${adminCheckError.message}` }, { status: 500, headers: corsHeaders });
+  }
+  if (!isAdmin) {
+    console.error("[invite-employer-member] is_company_admin returned false for user", userData.user.id, "company", companyId);
     return Response.json({ error: "Only a company admin can invite hiring team members." }, { status: 403, headers: corsHeaders });
   }
 
