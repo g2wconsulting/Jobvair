@@ -8,11 +8,19 @@
 //   signup, the employer app calls accept_pending_invitation() to attach
 //   them to the company automatically.
 // - If the email already has a Jobvair account, they're added to the
-//   company directly (via the invite_employer_member RPC) — no new invite
-//   email needed, they can just sign in.
+//   company directly (via the attach_existing_employer_member RPC) — no
+//   new invite email needed, they can just sign in.
 //
 // Requires SUPABASE_SERVICE_ROLE_KEY — only used inside this server-side
 // function, never sent to the client.
+//
+// Authorization note: the caller's identity is verified once via
+// auth.getUser(jwt) (reliable — it validates the JWT directly). Everything
+// after that — the company-admin check and attaching an existing user —
+// runs through the service-role connection with that verified user id
+// passed explicitly, rather than re-deriving identity via auth.uid() on a
+// forwarded-JWT RPC call, which does not reliably carry through in this
+// runtime.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -58,35 +66,43 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Invalid role." }, { status: 400, headers: corsHeaders });
   }
 
-  // Client bound to the caller's own JWT — RLS enforces they're really who
-  // they say they are; used to authorize the request and to safely fall
-  // back to attaching an existing account.
-  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-
-  const { data: userData, error: userError } = await callerClient.auth.getUser(jwt);
-  if (userError || !userData?.user) {
-    return Response.json({ error: "Invalid or expired session." }, { status: 401, headers: corsHeaders });
-  }
-
-  const { data: isAdmin, error: adminCheckError } = await callerClient.rpc("is_company_admin", { target_company_id: companyId });
-  if (adminCheckError) {
-    console.error("[invite-employer-member] is_company_admin RPC error:", adminCheckError);
-    return Response.json({ error: `Could not verify admin status: ${adminCheckError.message}` }, { status: 500, headers: corsHeaders });
-  }
-  if (!isAdmin) {
-    console.error("[invite-employer-member] is_company_admin returned false for user", userData.user.id, "company", companyId);
-    return Response.json({ error: "Only a company admin can invite hiring team members." }, { status: 403, headers: corsHeaders });
-  }
-
   if (!SUPABASE_SERVICE_ROLE_KEY) {
     return Response.json({ error: "Server is not configured to send invite emails (missing SUPABASE_SERVICE_ROLE_KEY)." }, { status: 500, headers: corsHeaders });
   }
 
+  // Verify the caller directly from their JWT — this does not depend on
+  // header forwarding through PostgREST, so it's reliable.
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: userData, error: userError } = await authClient.auth.getUser(jwt);
+  if (userError || !userData?.user) {
+    return Response.json({ error: "Invalid or expired session." }, { status: 401, headers: corsHeaders });
+  }
+
+  // Service-role client — bypasses RLS entirely, so every check below uses
+  // the already-verified userData.user.id explicitly instead of relying on
+  // auth.uid().
   const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  const { data: membership, error: membershipError } = await adminClient
+    .from("employer_memberships")
+    .select("role")
+    .eq("company_id", companyId)
+    .eq("user_id", userData.user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (membershipError) {
+    console.error("[invite-employer-member] membership lookup error:", membershipError);
+    return Response.json({ error: `Could not verify admin status: ${membershipError.message}` }, { status: 500, headers: corsHeaders });
+  }
+  if (!membership || membership.role !== "company_admin") {
+    console.error("[invite-employer-member] user", userData.user.id, "is not a company_admin of", companyId, "— found:", membership);
+    return Response.json({ error: "Only a company admin can invite hiring team members." }, { status: 403, headers: corsHeaders });
+  }
 
   const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
     redirectTo: SITE_URL ? `${SITE_URL}/employer` : undefined,
@@ -113,11 +129,14 @@ Deno.serve(async (request) => {
   }
 
   // Existing Jobvair account — attach them to the company directly instead
-  // of sending a signup invite they don't need.
-  const { error: attachError } = await callerClient.rpc("invite_employer_member", {
+  // of sending a signup invite they don't need. Runs via the service-role
+  // RPC (restricted to service_role) since we already authorized this
+  // request ourselves above.
+  const { error: attachError } = await adminClient.rpc("attach_existing_employer_member", {
     target_company_id: companyId,
     member_email: email,
     member_role: role,
+    inviter_id: userData.user.id,
   });
   if (attachError) {
     return Response.json({ error: attachError.message }, { status: 500, headers: corsHeaders });
