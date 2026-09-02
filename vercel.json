@@ -3,6 +3,8 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/admin", "destination": "/admin.html" }
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/employer", "destination": "/employer.html" },
+    { "source": "/employer/:path*", "destination": "/employer.html" }
   ]
 }

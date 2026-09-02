@@ -90,6 +90,11 @@ export default function AuthScreen({ onLogin }) {
       <div style={{ width: "100%", maxWidth: step === 3 ? 520 : 420 }}>
         <Logo />
 
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 20 }}>
+          <span style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(0,191,165,0.18)", border: "1px solid var(--jv-color-primary)", color: "#fff", fontSize: 12.5, fontWeight: 600 }}>I'm looking for work</span>
+          <a href="/employer" style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.7)", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>I'm hiring</a>
+        </div>
+
         {mode === "login" && (
           <div style={authCardStyle}>
             <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 750, color: "var(--jv-color-heading)" }}>Welcome back</h2>
@@ -229,7 +234,9 @@ export default function AuthScreen({ onLogin }) {
           </div>
         )}
 
-        <p style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.35)" }}>© 2025 Jobvair · Employer Portal Coming Soon</p>
+        <p style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
+          © 2025 Jobvair · Hiring? <a href="/employer" style={{ color: "rgba(255,255,255,0.6)" }}>Go to the Employer Portal →</a>
+        </p>
       </div>
     </div>
   );
