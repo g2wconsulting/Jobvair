@@ -91,8 +91,8 @@ export default function AuthScreen({ onLogin }) {
         <Logo />
 
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 20 }}>
-          <span style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(0,191,165,0.18)", border: "1px solid var(--jv-color-primary)", color: "#fff", fontSize: 12.5, fontWeight: 600 }}>I'm looking for work</span>
-          <a href="/employer" style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.7)", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>I'm hiring</a>
+          <span style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(0,191,165,0.18)", border: "1px solid var(--jv-color-primary)", color: "#fff", fontSize: 12.5, fontWeight: 600 }}>Job Seeker</span>
+          <a href="/employer" style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.7)", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>Employer</a>
         </div>
 
         {mode === "login" && (
