@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Send, RotateCw, Link2, X } from "lucide-react";
+import { Send, RotateCw, Link2, X, Download, FileSpreadsheet, FileText } from "lucide-react";
 import {
-  Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, EmptyState,
+  Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, EmptyState, ProgressBar,
 } from "../../components/ui/index.js";
 import {
   listAssessmentInvitations, createAssessmentInvitations, resendAssessmentInvitation, listJobs,
-  getAssessmentLink, getAssessmentResult,
+  getAssessmentLink, getAssessmentResult, listPublishedBundles, getAssessmentLicense, listCompanyAssessmentScores,
 } from "../lib/employerApi.js";
+import { exportResultsCSV, exportResultsExcel, exportCandidatePdf } from "../lib/assessmentExports.js";
 
 const ASSESSMENT_LIBRARY = [
   { id:"typing",          name:"Typing",                  icon:"⌨️", category:"Core Skills",      minutes:10, questions:1,  description:"Measures words per minute, accuracy, and consistency." },
@@ -25,25 +26,18 @@ const ASSESSMENT_LIBRARY = [
   { id:"it-support",      name:"IT Support Fundamentals", icon:"💻", category:"Technology",       minutes:20, questions:20, description:"Troubleshooting, hardware/software knowledge, and support." },
 ];
 
-const BUNDLES = [
-  { id:"admin-package",   name:"Administrative Skills Package", assessments:["typing","data-entry","word","excel","grammar","writing"] },
-  { id:"office-suite",    name:"Microsoft Office Suite",        assessments:["excel","word","powerpoint"] },
-  { id:"communication",   name:"Professional Communication",    assessments:["writing","grammar","reading","workplace"] },
-  { id:"tech-essentials", name:"Technology Essentials",         assessments:["ai-literacy","it-support","excel"] },
-  { id:"full-package",    name:"Full Assessment Package",       assessments:["typing","data-entry","excel","word","grammar","writing","workplace","ai-literacy"] },
-];
-
 const CATEGORY_TONE = { "Core Skills":"info", "Microsoft Office":"success", "Communication":"neutral", "Analytical":"warning", "Professional":"info", "Technology":"neutral", "Specialized":"danger" };
 
 const TABS = [
-  { id: "library", label: "Assessment Library" },
-  { id: "sent",    label: "Sent" },
+  { id: "library",    label: "Assessment Library" },
+  { id: "sent",       label: "Sent" },
+  { id: "comparison", label: "Comparison" },
 ];
 
 const STATUS_TONE = { sent: "neutral", in_progress: "warning", completed: "success", expired: "danger" };
 const STATUS_LABEL = { sent: "Invited", in_progress: "In Progress", completed: "Completed", expired: "Expired" };
 
-function LibraryTab({ selected, onToggle, onSelectBundle }) {
+function LibraryTab({ selected, onToggle, onSelectBundle, bundles }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const categories = ["all", ...new Set(ASSESSMENT_LIBRARY.map(a => a.category))];
@@ -64,11 +58,13 @@ function LibraryTab({ selected, onToggle, onSelectBundle }) {
           options={categories.map(c => ({ value: c, label: c === "all" ? "All categories" : c }))} />
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-        {BUNDLES.map(b => (
-          <Button key={b.id} size="sm" variant="secondary" onClick={() => onSelectBundle(b.assessments)}>{b.name}</Button>
-        ))}
-      </div>
+      {bundles.length > 0 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+          {bundles.map(b => (
+            <Button key={b.id} size="sm" variant="secondary" onClick={() => onSelectBundle(b.assessments)}>{b.name}</Button>
+          ))}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, paddingBottom: 70 }}>
         {filtered.map(a => {
@@ -112,7 +108,11 @@ function SendForm({ selected, company, user, onCancel, onSent }) {
     if (!valid.length) { setError("Add at least one candidate with a first name and email."); return; }
     setSending(true); setError("");
     try {
-      await createAssessmentInvitations(company.id, user.id, { assessmentIds: selected, dueDate, candidates: valid });
+      const { emailResults } = await createAssessmentInvitations(company.id, user.id, { assessmentIds: selected, dueDate, candidates: valid });
+      const failed = emailResults.filter(r => !r.sent);
+      if (failed.length > 0) {
+        alert(`Invitations were created, but the email didn't send for: ${failed.map(f => `${f.email} (${f.error})`).join(", ")}. Use "Copy Link" in the Sent tab to share manually.`);
+      }
       onSent();
     } catch (err) {
       setError(err.message || "Failed to send invitations.");
@@ -157,7 +157,7 @@ function SendForm({ selected, company, user, onCancel, onSent }) {
   );
 }
 
-function ResultDrawer({ invitation, onClose }) {
+function ResultDrawer({ invitation, company, onClose }) {
   const [result, setResult] = useState(undefined); // undefined = loading, null = not started
 
   useEffect(() => { getAssessmentResult(invitation.id).then(setResult); }, [invitation.id]);
@@ -169,7 +169,12 @@ function ResultDrawer({ invitation, onClose }) {
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{invitation.candidate_name}</h2>
           <div style={{ fontSize: 12, color: "var(--jv-color-muted)" }}>{invitation.candidate_email}</div>
         </div>
-        <Button variant="ghost" size="sm" icon={X} onClick={onClose}>Close</Button>
+        <div style={{ display: "flex", gap: 6 }}>
+          {result && (
+            <Button variant="secondary" size="sm" icon={Download} onClick={() => exportCandidatePdf({ invitation, company, result })}>Download PDF</Button>
+          )}
+          <Button variant="ghost" size="sm" icon={X} onClick={onClose}>Close</Button>
+        </div>
       </div>
 
       {result === undefined && <div>Loading results…</div>}
@@ -245,9 +250,22 @@ function SentTab({ company }) {
   }
 
   const viewing = invitations.find(i => i.id === viewingId);
+  const completedCount = invitations.filter(i => i.status === "completed").length;
+
+  const exportAll = async (format) => {
+    const scores = await listCompanyAssessmentScores(company.id);
+    if (format === "csv") exportResultsCSV(scores);
+    else await exportResultsExcel(scores);
+  };
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      {completedCount > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 4 }}>
+          <Button size="sm" variant="secondary" icon={FileText} onClick={() => exportAll("csv")}>Export CSV</Button>
+          <Button size="sm" variant="secondary" icon={FileSpreadsheet} onClick={() => exportAll("xlsx")}>Export Excel</Button>
+        </div>
+      )}
       {invitations.map(inv => (
         <Card key={inv.id}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
@@ -276,8 +294,86 @@ function SentTab({ company }) {
           </div>
         </Card>
       ))}
-      {viewing && <ResultDrawer invitation={viewing} onClose={() => setViewingId(null)} />}
+      {viewing && <ResultDrawer invitation={viewing} company={company} onClose={() => setViewingId(null)} />}
     </div>
+  );
+}
+
+// ── Comparison tab ───────────────────────────────────────────────────────────
+function ComparisonTab({ company }) {
+  const [scores, setScores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assessmentFilter, setAssessmentFilter] = useState("all");
+  const [sortKey, setSortKey] = useState("overall_score");
+
+  useEffect(() => { listCompanyAssessmentScores(company.id).then(setScores).finally(() => setLoading(false)); }, [company.id]);
+
+  if (loading) return <Card>Loading comparison…</Card>;
+  if (scores.length === 0) return <EmptyState title="No completed assessments yet" description="Once candidates complete assessments, compare their results here." />;
+
+  const assessmentSlugs = ["all", ...new Set(scores.map(s => s.assessment_slug))];
+  const filtered = assessmentFilter === "all" ? scores : scores.filter(s => s.assessment_slug === assessmentFilter);
+  const sorted = [...filtered].sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0));
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <Select value={assessmentFilter} onChange={e => setAssessmentFilter(e.target.value)}
+          options={assessmentSlugs.map(s => ({ value: s, label: s === "all" ? "All assessments" : s.replace(/-/g, " ") }))} />
+        <Select value={sortKey} onChange={e => setSortKey(e.target.value)}
+          options={[{ value: "overall_score", label: "Sort by overall score" }, { value: "points_earned", label: "Sort by points earned" }]} />
+      </div>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "var(--jv-color-slate-50)" }}>
+                {["Candidate", "Assessment", "Score", "Status", "Completed"].map(h => (
+                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, textTransform: "uppercase", color: "var(--jv-color-muted)" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(s => (
+                <tr key={s.id} style={{ borderTop: "1px solid var(--jv-color-border)" }}>
+                  <td style={{ padding: "10px 14px" }}>
+                    <div style={{ fontWeight: 600 }}>{s.candidate_name}</div>
+                    <div style={{ fontSize: 11, color: "var(--jv-color-muted)" }}>{s.candidate_email}</div>
+                  </td>
+                  <td style={{ padding: "10px 14px", textTransform: "capitalize" }}>{s.assessment_slug.replace(/-/g, " ")}</td>
+                  <td style={{ padding: "10px 14px", fontWeight: 700 }}>{Math.round(s.overall_score)}%</td>
+                  <td style={{ padding: "10px 14px" }}><Badge tone={s.passed ? "success" : "danger"}>{s.passed ? "Pass" : "Below Threshold"}</Badge></td>
+                  <td style={{ padding: "10px 14px", color: "var(--jv-color-muted)" }}>{s.scored_at ? new Date(s.scored_at).toLocaleDateString() : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ── Usage gauge ──────────────────────────────────────────────────────────────
+function UsageGauge({ company }) {
+  const [license, setLicense] = useState(undefined);
+  useEffect(() => { getAssessmentLicense(company.id).then(setLicense); }, [company.id]);
+
+  if (!license) return null; // no assessments sent yet — nothing to show
+
+  return (
+    <Card style={{ marginBottom: 20 }}>
+      <ProgressBar
+        value={license.completed_count}
+        max={license.annual_limit}
+        tone={license.completed_count / license.annual_limit > 0.9 ? "danger" : "primary"}
+        label={`Annual Assessment Usage — ${license.plan_name} plan`}
+      />
+      <div style={{ fontSize: 12, color: "var(--jv-color-muted)", marginTop: 8 }}>
+        {license.completed_count.toLocaleString()} / {license.annual_limit.toLocaleString()} completed assessments used
+        {license.renewal_date ? ` · Renews ${new Date(license.renewal_date).toLocaleDateString()}` : ""}
+      </div>
+    </Card>
   );
 }
 
@@ -285,6 +381,9 @@ export default function AssessmentsPage({ company, user }) {
   const [tab, setTab] = useState("library");
   const [selected, setSelected] = useState([]);
   const [sendingOpen, setSendingOpen] = useState(false);
+  const [bundles, setBundles] = useState([]);
+
+  useEffect(() => { listPublishedBundles().then(setBundles).catch(() => setBundles([])); }, []);
 
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const selectBundle = (ids) => setSelected(ids);
@@ -311,10 +410,12 @@ export default function AssessmentsPage({ company, user }) {
         title="Candidate Assessments"
         description="Send skills assessments to candidates and track completion and results."
       />
+      <UsageGauge company={company} />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       <div style={{ marginTop: 16 }}>
-        {tab === "library" && <LibraryTab selected={selected} onToggle={toggle} onSelectBundle={selectBundle} />}
+        {tab === "library" && <LibraryTab selected={selected} onToggle={toggle} onSelectBundle={selectBundle} bundles={bundles} />}
         {tab === "sent" && <SentTab company={company} />}
+        {tab === "comparison" && <ComparisonTab company={company} />}
       </div>
 
       {tab === "library" && selected.length > 0 && (

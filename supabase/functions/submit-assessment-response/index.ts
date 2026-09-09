@@ -51,7 +51,7 @@ Deno.serve(async request => {
 
   const { data: attempt } = await supabase
     .from("assessment_attempts")
-    .select("id, status, question_selection, certification_accepted_at")
+    .select("id, status, question_selection, assessment_version_ids, certification_accepted_at")
     .eq("invitation_id", invitation.id)
     .maybeSingle();
   if (!attempt) return Response.json({ error: "Assessment not started yet." }, { status: 404, headers: corsHeaders });
@@ -77,11 +77,30 @@ Deno.serve(async request => {
     .single();
   const assessmentSlug = (section as { assessments?: { slug?: string } })?.assessments?.slug || "";
 
-  const { data: question } = await supabase
-    .from("questions")
-    .select("id, type, points, correct_answer, rubric, prompt, question_options(id, is_correct)")
-    .eq("id", question_id)
-    .single();
+  // If this attempt pinned a published version of the assessment, score
+  // against that exact snapshot — never the live (possibly since-edited)
+  // question bank.
+  const versionIds = (attempt.assessment_version_ids || {}) as Record<string, string>;
+  const pinnedVersionId = versionIds[assessmentSlug];
+
+  let question: { id: string; type: string; points: number; correct_answer: unknown; rubric: unknown; prompt: string; question_options: { id: string; is_correct: boolean }[] } | null = null;
+
+  if (pinnedVersionId) {
+    const { data: version } = await supabase.from("assessment_versions").select("snapshot").eq("id", pinnedVersionId).single();
+    const snapshot = (version?.snapshot || { sections: [] }) as { sections: { id: string; questions: { id: string; type: string; points: number; correct_answer: unknown; rubric: unknown; prompt: string; options: { id: string; is_correct: boolean }[] }[] }[] };
+    const snapshotSection = snapshot.sections.find(s => s.id === sectionId);
+    const snapshotQuestion = snapshotSection?.questions.find(q => q.id === question_id);
+    if (snapshotQuestion) {
+      question = { ...snapshotQuestion, question_options: snapshotQuestion.options || [] };
+    }
+  } else {
+    const { data: liveQuestion } = await supabase
+      .from("questions")
+      .select("id, type, points, correct_answer, rubric, prompt, question_options(id, is_correct)")
+      .eq("id", question_id)
+      .single();
+    question = liveQuestion;
+  }
   if (!question) return Response.json({ error: "Question not found." }, { status: 404, headers: corsHeaders });
 
   let result;

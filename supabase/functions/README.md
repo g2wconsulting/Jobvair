@@ -15,7 +15,8 @@ Expected functions:
 - `builder-assistant` mock skeleton for Resume Assistant contract testing
 - `invite-employer-member` — see its own `README.md`
 - `get-assessment-attempt`, `submit-assessment-response`, `submit-assessment-attempt` — Jobvair Assess candidate flow, see below
-- `_shared/` — not a deployable function; `aiScoring.ts` and `scoring.ts` are imported by the assessment functions above
+- `create-assessment-invitations`, `resend-assessment-invitation` — employer-authenticated; create/re-send candidate invitations and email them via Resend
+- `_shared/` — not a deployable function; `aiScoring.ts`, `scoring.ts`, and `email.ts` are imported by the assessment functions above
 
 Common requirements:
 
@@ -37,4 +38,6 @@ Server-side environment variables to confirm from live Supabase:
 - `STRIPE_PRICE_PREMIUM`
 - `STRIPE_PRICE_PREMIUM_PLUS`
 - `STRIPE_PRICE_RECRUITER_LOOK`
-- `SITE_URL`
+- `SITE_URL` — also used to build the candidate assessment link (`${SITE_URL}/assessment.html?t=...`) in invitation emails
+- `RESEND_API_KEY` — required for `create-assessment-invitations`/`resend-assessment-invitation` to actually send candidate emails. Get one at resend.com; without it those functions return a clear "email not configured" error instead of silently failing, and invitation rows are still created (the employer can use "Copy Link" as a fallback).
+- `RESEND_FROM_EMAIL` — optional, defaults to `Jobvair Assess <assess@notifications.jobvair.com>`. Must be an address on a domain verified in Resend, or sending will fail.

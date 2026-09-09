@@ -10,118 +10,9 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
-
-// ── Design tokens ─────────────────────────────────────────────────────────
-const A = {
-  bg:         "#F0F4F8",
-  bgCard:     "#FFFFFF",
-  bgHover:    "#F8FAFC",
-  border:     "#E2E8F0",
-  borderHover:"#CBD5E1",
-  navy:       "#1E3A5F",
-  teal:       "#0D9488",
-  tealDim:    "#0D948822",
-  blue:       "#3B82F6",
-  purple:     "#7C3AED",
-  gold:       "#D97706",
-  red:        "#EF4444",
-  green:      "#059669",
-  text:       "#0F172A",
-  textMuted:  "#64748B",
-  textLight:  "#94A3B8",
-  white:      "#FFFFFF",
-};
-
-const font = "'DM Mono', 'Fira Code', 'Courier New', monospace";
-const sans = "'DM Sans', 'Inter', sans-serif";
-
-// ── Tiny components ───────────────────────────────────────────────────────
-const Card = ({ children, style = {}, onClick }) => (
-  <div onClick={onClick} style={{
-    background: A.bgCard, border: `1px solid ${A.border}`, borderRadius: 12,
-    padding: 24, transition: "border-color 0.15s",
-    cursor: onClick ? "pointer" : "default",
-    ...style,
-  }}
-    onMouseEnter={e => onClick && (e.currentTarget.style.borderColor = A.borderHover)}
-    onMouseLeave={e => onClick && (e.currentTarget.style.borderColor = A.border)}
-  >{children}</div>
-);
-
-const Badge = ({ children, color = "blue" }) => {
-  const colors = { blue: A.blue, teal: A.teal, green: A.green, red: A.red, gold: A.gold, purple: A.purple, gray: A.textMuted };
-  const c = colors[color] || A.blue;
-  return (
-    <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 8px", borderRadius:99,
-      background: `${c}22`, color: c, fontSize: 11, fontWeight: 700, letterSpacing:"0.05em",
-      fontFamily: font, border: `1px solid ${c}44` }}>
-      {children}
-    </span>
-  );
-};
-
-const Btn = ({ children, onClick, variant = "primary", small, disabled, full, icon }) => {
-  const base = {
-    display: "inline-flex", alignItems: "center", gap: 6, padding: small ? "6px 14px" : "10px 20px",
-    borderRadius: 8, fontSize: small ? 12 : 14, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.5 : 1, border: "none", fontFamily: sans, transition: "all 0.15s",
-    width: full ? "100%" : undefined, justifyContent: full ? "center" : undefined,
-  };
-  const variants = {
-    primary:   { background: A.teal, color: "#000" },
-    secondary: { background: "transparent", color: A.text, border: `1px solid ${A.border}` },
-    danger:    { background: `${A.red}22`, color: A.red, border: `1px solid ${A.red}44` },
-    ghost:     { background: "transparent", color: A.textMuted },
-  };
-  return (
-    <button onClick={disabled ? undefined : onClick} style={{ ...base, ...variants[variant] }}>
-      {icon && <span>{icon}</span>}{children}
-    </button>
-  );
-};
-
-const Input = ({ label, value, onChange, placeholder, type = "text", hint }) => (
-  <div>
-    {label && <div style={{ fontSize: 12, color: A.textMuted, marginBottom: 6, fontFamily: font, letterSpacing:"0.05em", textTransform:"uppercase" }}>{label}</div>}
-    <input
-      type={type}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      style={{
-        width: "100%", padding: "10px 14px", background: A.bg, border: `1px solid ${A.border}`,
-        borderRadius: 8, color: A.text, fontSize: 14, fontFamily: sans, outline: "none",
-        boxSizing: "border-box",
-      }}
-    />
-    {hint && <div style={{ fontSize: 11, color: A.textMuted, marginTop: 4 }}>{hint}</div>}
-  </div>
-);
-
-const Select = ({ label, value, onChange, options }) => (
-  <div>
-    {label && <div style={{ fontSize: 12, color: A.textMuted, marginBottom: 6, fontFamily: font, letterSpacing:"0.05em", textTransform:"uppercase" }}>{label}</div>}
-    <select value={value} onChange={e => onChange(e.target.value)} style={{
-      width: "100%", padding: "10px 14px", background: A.bg, border: `1px solid ${A.border}`,
-      borderRadius: 8, color: A.text, fontSize: 14, fontFamily: sans, outline: "none",
-    }}>
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  </div>
-);
-
-const StatCard = ({ label, value, sub, color = A.teal, icon }) => (
-  <Card>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <div>
-        <div style={{ fontSize: 12, color: A.textMuted, fontFamily: font, textTransform: "uppercase", letterSpacing:"0.08em", marginBottom: 8 }}>{label}</div>
-        <div style={{ fontSize: 32, fontWeight: 800, color, fontFamily: font }}>{value ?? "—"}</div>
-        {sub && <div style={{ fontSize: 12, color: A.textMuted, marginTop: 4 }}>{sub}</div>}
-      </div>
-      {icon && <div style={{ fontSize: 28, opacity: 0.6 }}>{icon}</div>}
-    </div>
-  </Card>
-);
+import { A, font, sans } from "./admin/theme.js";
+import { Card, Badge, Btn, Input, Select, StatCard } from "./admin/ui.jsx";
+import AssessmentsAdminPage from "./admin/AssessmentsAdminPage.jsx";
 
 // ── Admin Login ───────────────────────────────────────────────────────────
 function AdminLogin({ onLogin }) {
@@ -728,6 +619,7 @@ const NAV = [
   { id: "users",         icon: "◉", label: "Users" },
   { id: "subscriptions", icon: "◎", label: "Subscriptions" },
   { id: "templates",     icon: "◫", label: "Templates" },
+  { id: "assessments",   icon: "▤", label: "Assessments" },
 ];
 
 function Sidebar({ active, onNav, adminUser, onLogout }) {
@@ -809,6 +701,7 @@ export default function AdminApp() {
         {page === "users"         && <UsersPage />}
         {page === "subscriptions" && <SubscriptionsPage />}
         {page === "templates"     && <TemplatesPage adminUser={adminUser} />}
+        {page === "assessments"   && <AssessmentsAdminPage adminUser={adminUser} />}
       </div>
     </div>
   );

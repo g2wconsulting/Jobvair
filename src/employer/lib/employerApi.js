@@ -418,32 +418,64 @@ export async function listAssessmentInvitations(companyId) {
   return data || [];
 }
 
-// candidates: [{ first, last, email, jobId }]
+// candidates: [{ first, last, email, jobId }]. Creates the invitations and
+// emails each candidate a branded, secure link via the create-assessment-
+// invitations Edge Function (Resend). Throws with a clear message if the
+// company has hit its annual assessment allowance.
 export async function createAssessmentInvitations(companyId, userId, { assessmentIds, dueDate, candidates }) {
-  const rows = candidates.map(c => ({
-    company_id: companyId,
-    job_id: c.jobId || null,
-    candidate_name: [c.first, c.last].filter(Boolean).join(" "),
-    candidate_email: c.email,
-    assessment_ids: assessmentIds,
-    due_date: dueDate || null,
-    created_by: userId,
-  }));
-  const { data, error } = await supabase.from("assessment_invitations").insert(rows).select();
-  if (error) throw error;
-  return data || [];
+  const result = await edgeFetch("create-assessment-invitations", { companyId, assessmentIds, dueDate, candidates });
+  return { invitations: result.invitations || [], emailResults: result.email_results || [] };
 }
 
+// Re-sends the invitation email (does not reset candidate progress).
 export async function resendAssessmentInvitation(invitationId) {
-  const { error } = await supabase.from("assessment_invitations").update({ status: "sent" }).eq("id", invitationId);
-  if (error) throw error;
+  await edgeFetch("resend-assessment-invitation", { invitationId });
 }
 
-// Candidate-facing assessment link. Real branded email delivery isn't wired
-// up yet (needs a transactional email provider) — surfacing the direct
-// link lets an employer share it manually in the meantime.
+// Candidate-facing assessment link — useful as a fallback if the emailed
+// link needs to be shared manually (e.g. it landed in spam).
 export function getAssessmentLink(invitation) {
   return `${window.location.origin}/assessment.html?t=${invitation.invite_token}`;
+}
+
+// Admin-managed bundles (assessment_bundles/assessment_bundle_items),
+// resolved to the assessment slugs the employer send-flow already speaks.
+export async function listPublishedBundles() {
+  const { data, error } = await supabase
+    .from("assessment_bundles")
+    .select("id, name, description, assessment_bundle_items(display_order, assessments(slug))")
+    .eq("status", "published")
+    .order("name");
+  if (error) throw error;
+  return (data || []).map(b => ({
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    assessments: (b.assessment_bundle_items || [])
+      .sort((a, c) => a.display_order - c.display_order)
+      .map(i => i.assessments?.slug)
+      .filter(Boolean),
+  }));
+}
+
+export async function getAssessmentLicense(companyId) {
+  const { data, error } = await supabase.from("assessment_licenses").select("*").eq("company_id", companyId).maybeSingle();
+  if (error) throw error;
+  return data; // null if the company has never sent an assessment yet (no license row auto-provisioned until then)
+}
+
+// All completed scores for a company, for the candidate comparison view.
+export async function listCompanyAssessmentScores(companyId) {
+  const { data, error } = await supabase
+    .from("assessment_scores")
+    .select("*, assessment_attempts!inner(invitation_id, assessment_invitations!inner(candidate_name, candidate_email, company_id))")
+    .eq("assessment_attempts.assessment_invitations.company_id", companyId);
+  if (error) throw error;
+  return (data || []).map(row => ({
+    ...row,
+    candidate_name: row.assessment_attempts.assessment_invitations.candidate_name,
+    candidate_email: row.assessment_attempts.assessment_invitations.candidate_email,
+  }));
 }
 
 export async function getAssessmentResult(invitationId) {

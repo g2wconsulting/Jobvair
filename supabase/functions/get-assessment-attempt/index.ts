@@ -113,22 +113,47 @@ Deno.serve(async request => {
   const slugs: string[] = invitation.assessment_ids || [];
   const { data: assessments } = await supabase
     .from("assessments")
-    .select("id, slug, name, instructions, estimated_minutes, randomize_questions, randomize_options, assessment_sections(id, name, display_order, questions_to_draw, weight)")
+    .select("id, slug, name, instructions, estimated_minutes, randomize_questions, randomize_options, current_version_id, assessment_sections(id, name, display_order, questions_to_draw, weight)")
     .in("slug", slugs)
     .eq("status", "published");
 
   const questionSelection = { ...(attempt.question_selection || {}) } as Record<string, string[]>;
+  const versionIds = { ...(attempt.assessment_version_ids || {}) } as Record<string, string>;
   let selectionChanged = false;
+  let versionsChanged = false;
 
   const assessmentPayloads = [];
   for (const assessment of assessments || []) {
-    const sections = (assessment.assessment_sections || []).sort((a: { display_order: number }, b: { display_order: number }) => a.display_order - b.display_order);
-    const sectionPayloads = [];
+    // Pin to whichever version was current the first time this attempt
+    // loaded this assessment — a later "Publish" in the admin CMS must
+    // never change what a candidate already mid-attempt is answering.
+    if (!versionIds[assessment.slug] && assessment.current_version_id) {
+      versionIds[assessment.slug] = assessment.current_version_id;
+      versionsChanged = true;
+    }
+    const pinnedVersionId = versionIds[assessment.slug];
 
+    let sections: { id: string; name: string; display_order: number; questions_to_draw: number | null; weight: number }[];
+    let questionsBySection: Record<string, { id: string; type: string; prompt: string; media_url: string | null; points: number; correct_answer: unknown; options: { id: string; label: string }[] }[]>;
+
+    if (pinnedVersionId) {
+      const { data: version } = await supabase.from("assessment_versions").select("snapshot").eq("id", pinnedVersionId).single();
+      const snapshot = (version?.snapshot || { sections: [] }) as { sections: { id: string; name: string; display_order: number; questions_to_draw: number | null; weight: number; questions: { id: string; type: string; prompt: string; media_url: string | null; points: number; correct_answer: unknown; options: { id: string; label: string; is_correct?: boolean }[] }[] }[] };
+      sections = snapshot.sections;
+      questionsBySection = Object.fromEntries(snapshot.sections.map(s => [s.id, s.questions.map(q => ({ ...q, options: q.options || [] }))]));
+    } else {
+      // No published version yet — serve live authoring tables directly.
+      sections = (assessment.assessment_sections || []) as typeof sections;
+      questionsBySection = {};
+    }
+    sections = [...sections].sort((a, b) => a.display_order - b.display_order);
+
+    const sectionPayloads = [];
     for (const section of sections) {
       let orderedQuestionIds = questionSelection[section.id];
+      let liveQuestions: { id: string; type: string; prompt: string; media_url: string | null; points: number; correct_answer: unknown; question_options: { id: string; label: string; display_order: number }[] }[] | null = null;
 
-      if (!orderedQuestionIds) {
+      if (!pinnedVersionId && !orderedQuestionIds) {
         const { data: pool } = await supabase
           .from("assessment_questions")
           .select("question_id, display_order")
@@ -143,16 +168,37 @@ Deno.serve(async request => {
         orderedQuestionIds = ids;
         questionSelection[section.id] = ids;
         selectionChanged = true;
+
+        const { data: questions } = await supabase
+          .from("questions")
+          .select("id, type, prompt, media_url, points, correct_answer, question_options(id, label, display_order)")
+          .in("id", ids);
+        liveQuestions = questions || [];
+      } else if (!pinnedVersionId) {
+        const { data: questions } = await supabase
+          .from("questions")
+          .select("id, type, prompt, media_url, points, correct_answer, question_options(id, label, display_order)")
+          .in("id", orderedQuestionIds || []);
+        liveQuestions = questions || [];
+      } else if (!orderedQuestionIds) {
+        // Versioned: draw once from the snapshot's own question pool.
+        const pool = questionsBySection[section.id] || [];
+        let ids = pool.map(q => q.id);
+        if (section.questions_to_draw && section.questions_to_draw < ids.length) {
+          ids = shuffle(ids).slice(0, section.questions_to_draw);
+        } else {
+          ids = shuffle(ids);
+        }
+        orderedQuestionIds = ids;
+        questionSelection[section.id] = ids;
+        selectionChanged = true;
       }
 
-      if (orderedQuestionIds.length === 0) continue;
+      if (!orderedQuestionIds || orderedQuestionIds.length === 0) continue;
 
-      const { data: questions } = await supabase
-        .from("questions")
-        .select("id, type, prompt, media_url, points, correct_answer, question_options(id, label, display_order)")
-        .in("id", orderedQuestionIds);
-
-      const byId = new Map((questions || []).map(q => [q.id, q]));
+      const byId = pinnedVersionId
+        ? new Map((questionsBySection[section.id] || []).map(q => [q.id, { ...q, question_options: q.options }]))
+        : new Map((liveQuestions || []).map(q => [q.id, q]));
       const orderedQuestions = orderedQuestionIds.map(id => byId.get(id)).filter(Boolean);
 
       sectionPayloads.push({
@@ -161,7 +207,7 @@ Deno.serve(async request => {
         weight: section.weight,
         questions: orderedQuestions.map((q: {
           id: string; type: string; prompt: string; media_url: string | null; points: number;
-          correct_answer: unknown; question_options: { id: string; label: string; display_order: number }[];
+          correct_answer: unknown; question_options: { id: string; label: string; display_order?: number }[];
         }) => {
           const base = { id: q.id, type: q.type, prompt: q.prompt, media_url: q.media_url, points: q.points };
           if (q.type === "data_entry_exercise") {
@@ -170,7 +216,7 @@ Deno.serve(async request => {
             return { ...base, fields: (q.correct_answer as { fields?: unknown })?.fields ?? [], records: (q.correct_answer as { records?: unknown })?.records ?? [] };
           }
           if (["multiple_choice_single", "multiple_choice_multiple", "true_false", "scenario_judgment", "table_interpretation"].includes(q.type)) {
-            let options = (q.question_options || []).sort((a, b) => a.display_order - b.display_order).map(o => ({ id: o.id, label: o.label }));
+            let options = [...(q.question_options || [])].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)).map(o => ({ id: o.id, label: o.label }));
             if (assessment.randomize_options) options = shuffle(options);
             return { ...base, options };
           }
@@ -190,8 +236,8 @@ Deno.serve(async request => {
     }
   }
 
-  if (selectionChanged) {
-    await supabase.from("assessment_attempts").update({ question_selection: questionSelection }).eq("id", attempt.id);
+  if (selectionChanged || versionsChanged) {
+    await supabase.from("assessment_attempts").update({ question_selection: questionSelection, assessment_version_ids: versionIds }).eq("id", attempt.id);
   }
 
   return Response.json({

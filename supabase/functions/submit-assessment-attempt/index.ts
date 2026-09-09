@@ -42,13 +42,14 @@ Deno.serve(async request => {
 
   const { data: attempt } = await supabase
     .from("assessment_attempts")
-    .select("id, status")
+    .select("id, status, assessment_version_ids")
     .eq("invitation_id", invitation.id)
     .maybeSingle();
   if (!attempt) return Response.json({ error: "Assessment not started yet." }, { status: 404, headers: corsHeaders });
   if (attempt.status !== "in_progress") {
     return Response.json({ completed: true }, { headers: corsHeaders });
   }
+  const versionIds = (attempt.assessment_version_ids || {}) as Record<string, string>;
 
   const { data: responses } = await supabase
     .from("assessment_responses")
@@ -64,8 +65,19 @@ Deno.serve(async request => {
     const assessmentResponses = (responses || []).filter(r => r.assessment_slug === assessment.slug);
     if (assessmentResponses.length === 0) continue;
 
+    // Score against the exact sections (name/weight) pinned at attempt
+    // start when this assessment was versioned — a later edit to a
+    // section's weight must not retroactively change this score.
+    let sectionDefs: { id: string; name: string; weight: number }[] = assessment.assessment_sections || [];
+    const pinnedVersionId = versionIds[assessment.slug];
+    if (pinnedVersionId) {
+      const { data: version } = await supabase.from("assessment_versions").select("snapshot").eq("id", pinnedVersionId).single();
+      const snapshot = (version?.snapshot || { sections: [] }) as { sections: { id: string; name: string; weight: number }[] };
+      if (snapshot.sections?.length) sectionDefs = snapshot.sections;
+    }
+
     const sectionTotals = new Map<string, { earned: number; possible: number; name: string; weight: number }>();
-    for (const section of assessment.assessment_sections || []) {
+    for (const section of sectionDefs) {
       sectionTotals.set(section.id, { earned: 0, possible: 0, name: section.name, weight: Number(section.weight) || 1 });
     }
     const metrics: Record<string, unknown> = {};
@@ -109,6 +121,7 @@ Deno.serve(async request => {
         attempt_id: attempt.id,
         assessment_id: assessment.id,
         assessment_slug: assessment.slug,
+        assessment_version_id: pinnedVersionId || null,
         points_earned: totalEarned,
         points_possible: totalPossible,
         overall_score: overallScore,
