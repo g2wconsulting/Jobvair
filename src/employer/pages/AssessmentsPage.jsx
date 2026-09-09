@@ -58,6 +58,11 @@ function LibraryTab({ selected, onToggle, onSelectBundle, bundles }) {
           options={categories.map(c => ({ value: c, label: c === "all" ? "All categories" : c }))} />
       </div>
 
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <Button size="sm" variant="secondary" onClick={() => onSelectBundle(ASSESSMENT_LIBRARY.map(a => a.id))}>Select All</Button>
+        {selected.length > 0 && <Button size="sm" variant="ghost" onClick={() => onSelectBundle([])}>Clear Selection</Button>}
+      </div>
+
       {bundles.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
           {bundles.map(b => (
@@ -397,7 +402,7 @@ export default function AssessmentsPage({ company, user }) {
   if (sendingOpen) {
     return (
       <Page size="wide">
-        <PageHeader eyebrow="Assessments" title="Send Assessment" description="Review the selected assessments and add candidates below." />
+        <PageHeader eyebrow="Assessments" title="Send Assessments" description="Review the selected assessments and add candidates below." />
         <SendForm selected={selected} company={company} user={user} onCancel={() => setSendingOpen(false)} onSent={handleSent} />
       </Page>
     );
@@ -423,7 +428,7 @@ export default function AssessmentsPage({ company, user }) {
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--jv-color-heading)" }}>{selected.length} assessment{selected.length !== 1 ? "s" : ""} selected</span>
           <div style={{ display: "flex", gap: 8 }}>
             <Button variant="secondary" onClick={() => setSelected([])}>Clear</Button>
-            <Button icon={Send} onClick={() => setSendingOpen(true)}>Send to Candidates</Button>
+            <Button icon={Send} onClick={() => setSendingOpen(true)}>Send Assessments</Button>
           </div>
         </div>
       )}
