@@ -95,6 +95,10 @@ export default function AuthScreen({ onLogin }) {
           <a href="/employer" style={{ padding: "6px 14px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.7)", fontSize: 12.5, fontWeight: 600, textDecoration: "none" }}>Employer</a>
         </div>
 
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <a href="/jobs" style={{ fontSize: 12.5, color: "rgba(255,255,255,0.75)", textDecoration: "underline" }}>Browse open jobs without signing in</a>
+        </div>
+
         {mode === "login" && (
           <div style={authCardStyle}>
             <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 750, color: "var(--jv-color-heading)" }}>Welcome back</h2>

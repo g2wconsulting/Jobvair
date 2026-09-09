@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /jobs
+Disallow: /admin
+Disallow: /employer
+Disallow: /assessment.html
+
+Sitemap: https://jobvair.com/sitemap.xml

@@ -19,6 +19,7 @@ export default defineConfig({
         admin:      resolve(__dirname, "admin.html"),
         employer:   resolve(__dirname, "employer.html"),
         assessment: resolve(__dirname, "assessment.html"),
+        jobs:       resolve(__dirname, "jobs.html"),
       },
     },
   },
