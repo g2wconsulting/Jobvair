@@ -2,6 +2,7 @@ export const EMPLOYER_NAV = [
   { id: "dashboard",    label: "Dashboard" },
   { id: "jobs",         label: "Jobs" },
   { id: "candidates",   label: "Candidates" },
+  { id: "assessments",  label: "Assessments" },
   { id: "hiring",       label: "Hiring" },
   { id: "intelligence", label: "Intelligence" },
   { id: "company",      label: "Company" },

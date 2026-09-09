@@ -406,3 +406,35 @@ export async function getDashboardMetrics(companyId) {
   if (error) throw error;
   return data;
 }
+
+// ── Assessments ─────────────────────────────────────────────────────────
+export async function listAssessmentInvitations(companyId) {
+  const { data, error } = await supabase
+    .from("assessment_invitations")
+    .select("*, jobs(title)")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+// candidates: [{ first, last, email, jobId }]
+export async function createAssessmentInvitations(companyId, userId, { assessmentIds, dueDate, candidates }) {
+  const rows = candidates.map(c => ({
+    company_id: companyId,
+    job_id: c.jobId || null,
+    candidate_name: [c.first, c.last].filter(Boolean).join(" "),
+    candidate_email: c.email,
+    assessment_ids: assessmentIds,
+    due_date: dueDate || null,
+    created_by: userId,
+  }));
+  const { data, error } = await supabase.from("assessment_invitations").insert(rows).select();
+  if (error) throw error;
+  return data || [];
+}
+
+export async function resendAssessmentInvitation(invitationId) {
+  const { error } = await supabase.from("assessment_invitations").update({ status: "sent" }).eq("id", invitationId);
+  if (error) throw error;
+}

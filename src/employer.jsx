@@ -6,6 +6,7 @@ import EmployerAuthScreen from "./employer/pages/AuthScreen.jsx";
 import EmployerDashboardPage from "./employer/pages/DashboardPage.jsx";
 import JobsPage from "./employer/pages/JobsPage.jsx";
 import CandidatesPage from "./employer/pages/CandidatesPage.jsx";
+import AssessmentsPage from "./employer/pages/AssessmentsPage.jsx";
 import HiringPage from "./employer/pages/HiringPage.jsx";
 import IntelligencePage from "./employer/pages/IntelligencePage.jsx";
 import CompanyPage from "./employer/pages/CompanyPage.jsx";
@@ -163,6 +164,7 @@ export default function EmployerApp() {
           {page === "dashboard"    && <EmployerDashboardPage company={company} onNav={setPage} />}
           {page === "jobs"         && <JobsPage company={company} user={user} />}
           {page === "candidates"   && <CandidatesPage company={company} user={user} />}
+          {page === "assessments"  && <AssessmentsPage company={company} user={user} />}
           {page === "hiring"       && <HiringPage company={company} user={user} />}
           {page === "intelligence" && <IntelligencePage company={company} user={user} />}
           {page === "company"      && <CompanyPage company={company} membership={activeMembership} onCompanyUpdated={loadMemberships} />}
