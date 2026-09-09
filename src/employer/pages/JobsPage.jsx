@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Sparkles, Copy, Pause, Play, Archive, XCircle, Pencil, Share2 } from "lucide-react";
 import {
   Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, TextArea,
-  CheckGroup, EmptyState,
+  CheckGroup, EmptyState, Toggle,
 } from "../../components/ui/index.js";
 import {
   listJobs, createJob, updateJob, setJobStatus, duplicateJob, deleteJob,
@@ -153,6 +153,27 @@ function JobEditor({ job, onSave, onCancel }) {
           onChange={v => set("travel_requirements", v[v.length - 1] || "")}
           options={[{ value: "none", label: "None" }, { value: "occasional", label: "Occasional" }, { value: "frequent", label: "Frequent" }]}
         />
+
+        <div style={{ padding: 16, background: "var(--jv-color-slate-50)", borderRadius: "var(--jv-radius-md)" }}>
+          <div className="jv-field__label" style={{ marginBottom: 10 }}>New applicant notifications</div>
+          <Toggle
+            checked={form.notify_on_application}
+            onChange={v => set("notify_on_application", v)}
+            label={form.notify_on_application ? "Email me the moment someone applies to this job" : "Notifications off — applicants only appear in the pipeline"}
+          />
+          {form.notify_on_application && (
+            <div style={{ marginTop: 12 }}>
+              <Input
+                label="Send to (optional)"
+                type="email"
+                placeholder="Defaults to your account email"
+                value={form.notification_email || ""}
+                onChange={e => set("notification_email", e.target.value)}
+                hint="Use this to route applicants for this job to a different inbox, e.g. a hiring-team distribution list."
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap" }}>

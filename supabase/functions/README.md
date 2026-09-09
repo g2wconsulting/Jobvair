@@ -17,6 +17,7 @@ Expected functions:
 - `get-assessment-attempt`, `submit-assessment-response`, `submit-assessment-attempt` — Jobvair Assess candidate flow, see below
 - `create-assessment-invitations`, `resend-assessment-invitation` — employer-authenticated; create/re-send candidate invitations and email them via Resend
 - `send-candidate-message`, `invite-to-interview` — employer-authenticated candidate outreach v1; emails the applicant directly via Resend and logs a `candidate_notes` row (`note_type` `'message'`/`'interview'`) against the application
+- `notify-new-application` — **not** called by the frontend. Triggered by a Supabase Database Webhook (Database → Webhooks in the dashboard: table `job_applications`, event `Insert`, type "Supabase Edge Functions" → this function) so it fires no matter how the application row was created. Emails whoever the job's `notification_email` (or, if unset, the company's primary contact) is, unless `jobs.notify_on_application` is false. The "Supabase Edge Functions" webhook type signs its calls with the service-role key automatically, which this function checks as its only auth.
 - `_shared/` — not a deployable function; `aiScoring.ts`, `scoring.ts`, and `email.ts` are imported by the assessment functions above
 
 Common requirements:

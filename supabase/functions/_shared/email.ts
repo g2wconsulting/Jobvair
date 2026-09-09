@@ -120,6 +120,35 @@ export async function sendCandidateMessageEmail(params: CandidateMessageEmailPar
   return sendEmail({ to: params.to, subject: params.subject, html, text });
 }
 
+export interface NewApplicantEmailParams {
+  to: string;
+  jobTitle: string;
+  candidateName: string;
+  candidateHeadline: string | null;
+  applicationUrl: string;
+}
+
+export async function sendNewApplicantEmail(params: NewApplicantEmailParams): Promise<{ sent: boolean; error?: string }> {
+  const html = `
+<div style="font-family: -apple-system, 'Inter', system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #111827;">
+  <div style="text-align:center; margin-bottom:28px;">
+    <div style="display:inline-block; width:40px; height:40px; border-radius:10px; background:#1D4ED8; line-height:40px; color:#fff; font-weight:700; font-size:18px;">J</div>
+    <div style="font-size:13px; color:#6B7280; margin-top:8px;">Jobvair</div>
+  </div>
+  <h1 style="font-size:20px; margin:0 0 12px;">New applicant for ${escapeHtml(params.jobTitle)}</h1>
+  <p style="font-size:14px; line-height:1.6; margin:0 0 8px;"><strong>${escapeHtml(params.candidateName || "A candidate")}</strong> just applied.</p>
+  ${params.candidateHeadline ? `<p style="font-size:14px; line-height:1.6; color:#6B7280; margin:0 0 16px;">${escapeHtml(params.candidateHeadline)}</p>` : ""}
+  <div style="text-align:center; margin:28px 0;">
+    <a href="${params.applicationUrl}" style="display:inline-block; background:#1D4ED8; color:#fff; text-decoration:none; padding:12px 28px; border-radius:8px; font-size:14px; font-weight:600;">View Application</a>
+  </div>
+  <p style="font-size:12px; color:#9CA3AF; margin-top:28px; text-align:center;">You're getting this because notifications are on for this job — change that anytime from the job's settings in Jobvair.</p>
+</div>`.trim();
+
+  const text = `${params.candidateName || "A candidate"} just applied to ${params.jobTitle}.${params.candidateHeadline ? `\n${params.candidateHeadline}` : ""}\n\nView: ${params.applicationUrl}`;
+
+  return sendEmail({ to: params.to, subject: `New applicant: ${params.jobTitle}`, html, text });
+}
+
 export interface InterviewInviteEmailParams {
   to: string;
   candidateName: string;

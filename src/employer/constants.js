@@ -52,4 +52,5 @@ export const EMPTY_JOB = {
   required_skills: [], preferred_skills: [], description: "",
   responsibilities: "", benefits: "", travel_requirements: "",
   screening_questions: [], status: "draft",
+  notify_on_application: true, notification_email: "",
 };
