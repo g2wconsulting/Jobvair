@@ -65,6 +65,7 @@ export default function EmployerApp() {
   const [page, setPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [features, setFeatures] = useState(null);
+  const [assessmentPrefill, setAssessmentPrefill] = useState(null);
 
   const loadMemberships = async () => {
     setMembershipsError("");
@@ -154,6 +155,12 @@ export default function EmployerApp() {
     setPage(nextPage);
   };
 
+  const sendAssessmentTo = ({ profile, application }) => {
+    const [first, ...rest] = (profile?.full_name || "").trim().split(/\s+/);
+    setAssessmentPrefill({ first: first || "", last: rest.join(" "), email: profile?.email || "", jobId: application?.job_id || "" });
+    navigate("assessments");
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--jv-color-page)", fontFamily: "var(--jv-font-sans)" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -182,8 +189,10 @@ export default function EmployerApp() {
         <div style={{ flex: 1, overflowY: "auto" }}>
           {page === "dashboard"    && <EmployerDashboardPage company={company} onNav={navigate} />}
           {page === "jobs"         && <JobsPage company={company} user={user} />}
-          {page === "candidates"   && <CandidatesPage company={company} user={user} features={features} />}
-          {page === "assessments"  && hasFeature(features, "assessments") && <AssessmentsPage company={company} user={user} />}
+          {page === "candidates"   && <CandidatesPage company={company} user={user} features={features} onSendAssessment={sendAssessmentTo} />}
+          {page === "assessments"  && hasFeature(features, "assessments") && (
+            <AssessmentsPage company={company} user={user} prefillCandidate={assessmentPrefill} onPrefillConsumed={() => setAssessmentPrefill(null)} />
+          )}
           {page === "assessment-builder" && hasFeature(features, "assessment_builder") && <AssessmentBuilderPage company={company} user={user} />}
           {page === "hiring"       && <HiringPage company={company} user={user} />}
           {page === "intelligence" && hasFeature(features, "market_intelligence") && <IntelligencePage company={company} user={user} />}

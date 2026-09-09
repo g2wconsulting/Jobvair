@@ -61,12 +61,10 @@ Find a quiet space with a stable internet connection before you start. You'll be
   return { html, text };
 }
 
-export async function sendAssessmentInvitationEmail(params: AssessmentInviteEmailParams): Promise<{ sent: boolean; error?: string }> {
+async function sendEmail(params: { to: string; subject: string; html: string; text: string }): Promise<{ sent: boolean; error?: string }> {
   if (!RESEND_API_KEY) {
     return { sent: false, error: "Email is not configured yet (missing RESEND_API_KEY)." };
   }
-  const { html, text } = buildAssessmentInviteEmail(params);
-
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -76,9 +74,9 @@ export async function sendAssessmentInvitationEmail(params: AssessmentInviteEmai
     body: JSON.stringify({
       from: RESEND_FROM_EMAIL,
       to: [params.to],
-      subject: `Assessment Invitation — ${params.employerName}`,
-      html,
-      text,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
     }),
   });
 
@@ -88,4 +86,81 @@ export async function sendAssessmentInvitationEmail(params: AssessmentInviteEmai
     return { sent: false, error: `Email provider error (${res.status}).` };
   }
   return { sent: true };
+}
+
+export async function sendAssessmentInvitationEmail(params: AssessmentInviteEmailParams): Promise<{ sent: boolean; error?: string }> {
+  const { html, text } = buildAssessmentInviteEmail(params);
+  return sendEmail({ to: params.to, subject: `Assessment Invitation — ${params.employerName}`, html, text });
+}
+
+export interface CandidateMessageEmailParams {
+  to: string;
+  candidateName: string;
+  employerName: string;
+  senderName: string;
+  subject: string;
+  body: string;
+}
+
+export async function sendCandidateMessageEmail(params: CandidateMessageEmailParams): Promise<{ sent: boolean; error?: string }> {
+  const firstName = (params.candidateName || "there").split(" ")[0];
+  const bodyHtml = escapeHtml(params.body).replace(/\n/g, "<br>");
+  const html = `
+<div style="font-family: -apple-system, 'Inter', system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #111827;">
+  <div style="text-align:center; margin-bottom:28px;">
+    <div style="display:inline-block; width:40px; height:40px; border-radius:10px; background:#1D4ED8; line-height:40px; color:#fff; font-weight:700; font-size:18px;">J</div>
+    <div style="font-size:13px; color:#6B7280; margin-top:8px;">Jobvair</div>
+  </div>
+  <p style="font-size:14px; line-height:1.6; margin:0 0 16px;">Hi ${escapeHtml(firstName)},</p>
+  <p style="font-size:14px; line-height:1.6; margin:0 0 16px; white-space:pre-wrap;">${bodyHtml}</p>
+  <p style="font-size:14px; line-height:1.6; margin:24px 0 0;">— ${escapeHtml(params.senderName)}, ${escapeHtml(params.employerName)}</p>
+  <p style="font-size:12px; color:#9CA3AF; margin-top:28px; text-align:center;">Sent via Jobvair on behalf of ${escapeHtml(params.employerName)}.</p>
+</div>`.trim();
+  const text = `Hi ${firstName},\n\n${params.body}\n\n— ${params.senderName}, ${params.employerName}`;
+  return sendEmail({ to: params.to, subject: params.subject, html, text });
+}
+
+export interface InterviewInviteEmailParams {
+  to: string;
+  candidateName: string;
+  employerName: string;
+  jobTitle: string;
+  scheduledAt: string;
+  durationMinutes: number | null;
+  location: string | null;
+  meetingLink: string | null;
+}
+
+export async function sendInterviewInviteEmail(params: InterviewInviteEmailParams): Promise<{ sent: boolean; error?: string }> {
+  const firstName = (params.candidateName || "there").split(" ")[0];
+  const when = new Date(params.scheduledAt).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" });
+  const details = [
+    params.durationMinutes ? `<strong>Duration:</strong> ${params.durationMinutes} minutes` : null,
+    params.location ? `<strong>Location:</strong> ${escapeHtml(params.location)}` : null,
+    params.meetingLink ? `<strong>Meeting link:</strong> <a href="${escapeHtml(params.meetingLink)}">${escapeHtml(params.meetingLink)}</a>` : null,
+  ].filter(Boolean).map(line => `<p style="font-size:14px; line-height:1.6; margin:0 0 8px;">${line}</p>`).join("");
+
+  const html = `
+<div style="font-family: -apple-system, 'Inter', system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #111827;">
+  <div style="text-align:center; margin-bottom:28px;">
+    <div style="display:inline-block; width:40px; height:40px; border-radius:10px; background:#1D4ED8; line-height:40px; color:#fff; font-weight:700; font-size:18px;">J</div>
+    <div style="font-size:13px; color:#6B7280; margin-top:8px;">Jobvair</div>
+  </div>
+  <h1 style="font-size:20px; margin:0 0 12px;">You're invited to interview</h1>
+  <p style="font-size:14px; line-height:1.6; margin:0 0 16px;">Hi ${escapeHtml(firstName)},</p>
+  <p style="font-size:14px; line-height:1.6; margin:0 0 16px;"><strong>${escapeHtml(params.employerName)}</strong> would like to invite you to interview for <strong>${escapeHtml(params.jobTitle)}</strong>.</p>
+  <p style="font-size:14px; line-height:1.6; margin:0 0 8px;"><strong>When:</strong> ${when}</p>
+  ${details}
+  <p style="font-size:13px; line-height:1.6; color:#6B7280; margin:24px 0 0;">Reply directly to this email if you need to reschedule.</p>
+</div>`.trim();
+
+  const text = `Hi ${firstName},
+
+${params.employerName} would like to invite you to interview for ${params.jobTitle}.
+
+When: ${when}
+${params.durationMinutes ? `Duration: ${params.durationMinutes} minutes\n` : ""}${params.location ? `Location: ${params.location}\n` : ""}${params.meetingLink ? `Meeting link: ${params.meetingLink}\n` : ""}
+Reply directly to this email if you need to reschedule.`;
+
+  return sendEmail({ to: params.to, subject: `Interview Invitation — ${params.employerName}`, html, text });
 }

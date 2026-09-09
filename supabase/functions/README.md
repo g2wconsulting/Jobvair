@@ -16,6 +16,7 @@ Expected functions:
 - `invite-employer-member` — see its own `README.md`
 - `get-assessment-attempt`, `submit-assessment-response`, `submit-assessment-attempt` — Jobvair Assess candidate flow, see below
 - `create-assessment-invitations`, `resend-assessment-invitation` — employer-authenticated; create/re-send candidate invitations and email them via Resend
+- `send-candidate-message`, `invite-to-interview` — employer-authenticated candidate outreach v1; emails the applicant directly via Resend and logs a `candidate_notes` row (`note_type` `'message'`/`'interview'`) against the application
 - `_shared/` — not a deployable function; `aiScoring.ts`, `scoring.ts`, and `email.ts` are imported by the assessment functions above
 
 Common requirements:

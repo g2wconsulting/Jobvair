@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, X, UserSearch, Bookmark } from "lucide-react";
+import { ShieldCheck, X, UserSearch, Bookmark, Mail, CalendarClock, ClipboardCheck } from "lucide-react";
 import {
   Page, PageHeader, Tabs, Card, Button, Badge, Select, TextArea, EmptyState, Input,
 } from "../../components/ui/index.js";
 import {
   listApplicationsForCompany, getApplicationDetail, updateApplicationStage,
-  addCandidateNote, listSavedCandidates, unsaveCandidate,
+  addCandidateNote, listSavedCandidates, unsaveCandidate, sendCandidateMessage, inviteToInterview,
 } from "../lib/employerApi.js";
 import { PIPELINE_STAGES, PIPELINE_SIDE_STAGES, ALL_STAGES } from "../constants.js";
+import { hasFeature } from "../featureFlags.js";
 
 const TABS = [
   { id: "applicants", label: "Applicants" },
@@ -15,10 +16,90 @@ const TABS = [
   { id: "saved",      label: "Saved Candidates" },
 ];
 
-function CandidateDrawer({ applicationId, onClose, user, onChanged }) {
+function MessagePanel({ application, onClose, onSent }) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const send = async () => {
+    if (!subject.trim() || !body.trim()) return;
+    setSending(true); setError("");
+    try {
+      await sendCandidateMessage(application.id, subject.trim(), body.trim());
+      onSent();
+      onClose();
+    } catch (err) {
+      setError(err.message || "Failed to send message.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Send message</div>
+      <Input placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)} style={{ marginBottom: 8 }} />
+      <TextArea rows={4} placeholder="Write your message…" value={body} onChange={e => setBody(e.target.value)} />
+      {error && <div style={{ fontSize: 12.5, color: "var(--jv-color-danger-600)", marginTop: 8 }}>{error}</div>}
+      <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
+        <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button size="sm" disabled={sending || !subject.trim() || !body.trim()} onClick={send}>{sending ? "Sending…" : "Send"}</Button>
+      </div>
+    </Card>
+  );
+}
+
+function InterviewPanel({ application, onClose, onSent }) {
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("30");
+  const [location, setLocation] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const send = async () => {
+    if (!scheduledAt) return;
+    setSending(true); setError("");
+    try {
+      await inviteToInterview(application.id, {
+        scheduledAt: new Date(scheduledAt).toISOString(),
+        durationMinutes: durationMinutes ? Number(durationMinutes) : null,
+        location: location.trim() || null,
+        meetingLink: meetingLink.trim() || null,
+      });
+      onSent();
+      onClose();
+    } catch (err) {
+      setError(err.message || "Failed to send interview invitation.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Invite to interview</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: 8, marginBottom: 8 }}>
+        <Input label="Date & time" type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} />
+        <Input label="Minutes" type="number" value={durationMinutes} onChange={e => setDurationMinutes(e.target.value)} />
+      </div>
+      <Input label="Location (optional)" placeholder="123 Main St, Suite 400" value={location} onChange={e => setLocation(e.target.value)} style={{ marginBottom: 8 }} />
+      <Input label="Meeting link (optional)" placeholder="https://zoom.us/…" value={meetingLink} onChange={e => setMeetingLink(e.target.value)} />
+      {error && <div style={{ fontSize: 12.5, color: "var(--jv-color-danger-600)", marginTop: 8 }}>{error}</div>}
+      <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
+        <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button size="sm" disabled={sending || !scheduledAt} onClick={send}>{sending ? "Sending…" : "Send Invitation"}</Button>
+      </div>
+    </Card>
+  );
+}
+
+function CandidateDrawer({ applicationId, onClose, user, onChanged, features, onSendAssessment }) {
   const [detail, setDetail] = useState(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [activePanel, setActivePanel] = useState(null); // "message" | "interview" | null
 
   const load = () => getApplicationDetail(applicationId).then(setDetail);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,6 +146,25 @@ function CandidateDrawer({ applicationId, onClose, user, onChanged }) {
         <Select value={application.current_stage} onChange={e => move(e.target.value)}
           options={ALL_STAGES.map(s => ({ value: s.id, label: s.label }))} />
       </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        {hasFeature(features, "candidate_messaging") && (
+          <Button size="sm" variant="secondary" icon={Mail} onClick={() => setActivePanel(p => p === "message" ? null : "message")}>Send Message</Button>
+        )}
+        {hasFeature(features, "assessments") && onSendAssessment && (
+          <Button size="sm" variant="secondary" icon={ClipboardCheck} onClick={() => onSendAssessment({ profile, application })}>Send Assessment</Button>
+        )}
+        {hasFeature(features, "interview_scheduling") && (
+          <Button size="sm" variant="secondary" icon={CalendarClock} onClick={() => setActivePanel(p => p === "interview" ? null : "interview")}>Invite to Interview</Button>
+        )}
+      </div>
+
+      {activePanel === "message" && (
+        <MessagePanel application={application} onClose={() => setActivePanel(null)} onSent={load} />
+      )}
+      {activePanel === "interview" && (
+        <InterviewPanel application={application} onClose={() => setActivePanel(null)} onSent={load} />
+      )}
 
       {profile?.summary && (
         <div style={{ marginBottom: 16 }}>
@@ -126,7 +226,10 @@ function CandidateDrawer({ applicationId, onClose, user, onChanged }) {
       <div style={{ marginBottom: 16 }}>
         <div className="jv-field__label" style={{ marginBottom: 6 }}>Internal notes</div>
         {notes.map(n => (
-          <div key={n.id} style={{ fontSize: 12, padding: "8px 10px", background: "var(--jv-color-slate-50)", borderRadius: "var(--jv-radius-sm)", marginBottom: 6 }}>{n.body}</div>
+          <div key={n.id} style={{ fontSize: 12, padding: "8px 10px", background: "var(--jv-color-slate-50)", borderRadius: "var(--jv-radius-sm)", marginBottom: 6, whiteSpace: "pre-wrap" }}>
+            {n.note_type !== "internal" && <Badge tone={n.note_type === "message" ? "info" : "success"}>{n.note_type}</Badge>}
+            <div style={{ marginTop: n.note_type !== "internal" ? 4 : 0 }}>{n.body}</div>
+          </div>
         ))}
         <TextArea rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Add a private note about this candidate…" />
         <Button size="sm" style={{ marginTop: 8 }} disabled={saving || !note.trim()} onClick={saveNote}>Add note</Button>
@@ -146,7 +249,7 @@ function CandidateDrawer({ applicationId, onClose, user, onChanged }) {
   );
 }
 
-export function ApplicantsBoard({ company, user }) {
+export function ApplicantsBoard({ company, user, features, onSendAssessment }) {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
@@ -197,7 +300,16 @@ export function ApplicantsBoard({ company, user }) {
         })}
       </div>
 
-      {openId && <CandidateDrawer applicationId={openId} onClose={() => setOpenId(null)} user={user} onChanged={reload} />}
+      {openId && (
+        <CandidateDrawer
+          applicationId={openId}
+          onClose={() => setOpenId(null)}
+          user={user}
+          onChanged={reload}
+          features={features}
+          onSendAssessment={onSendAssessment}
+        />
+      )}
     </>
   );
 }
@@ -253,14 +365,14 @@ function SavedCandidatesTab({ company }) {
   );
 }
 
-export default function CandidatesPage({ company, user }) {
+export default function CandidatesPage({ company, user, features, onSendAssessment }) {
   const [tab, setTab] = useState("applicants");
   return (
     <Page size="wide">
       <PageHeader eyebrow="Candidates" title="Candidates" description="Every applicant automatically enters your pipeline, built directly on the candidate's structured Jobvair profile." />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       <div style={{ marginTop: 16 }}>
-        {tab === "applicants" && <ApplicantsBoard company={company} user={user} />}
+        {tab === "applicants" && <ApplicantsBoard company={company} user={user} features={features} onSendAssessment={onSendAssessment} />}
         {tab === "search" && <TalentSearchTab />}
         {tab === "saved" && <SavedCandidatesTab company={company} />}
       </div>

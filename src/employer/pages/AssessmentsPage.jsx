@@ -156,10 +156,10 @@ function ApplicantPicker({ company, existingEmails, onAdd, onClose }) {
   );
 }
 
-function SendForm({ selected, library, company, user, onCancel, onSent }) {
+function SendForm({ selected, library, company, user, onCancel, onSent, initialCandidate }) {
   const assessments = library.filter(a => selected.includes(a.id));
   const [jobs, setJobs] = useState([]);
-  const [candidates, setCandidates] = useState([{ first: "", last: "", email: "", jobId: "" }]);
+  const [candidates, setCandidates] = useState(initialCandidate ? [initialCandidate] : [{ first: "", last: "", email: "", jobId: "" }]);
   const [dueDate, setDueDate] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -466,16 +466,23 @@ function UsageGauge({ company }) {
   );
 }
 
-export default function AssessmentsPage({ company, user }) {
+export default function AssessmentsPage({ company, user, prefillCandidate, onPrefillConsumed }) {
   const [tab, setTab] = useState("library");
   const [selected, setSelected] = useState([]);
   const [sendingOpen, setSendingOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
   const [customAssessments, setCustomAssessments] = useState([]);
   const library = [...ASSESSMENT_LIBRARY, ...customAssessments];
+  // Captured once on mount — the parent clears its own copy of this right
+  // away, but this component keeps using it until the user actually sends.
+  const [pendingCandidate] = useState(prefillCandidate || null);
 
   useEffect(() => { listPublishedBundles().then(setBundles).catch(() => setBundles([])); }, []);
   useEffect(() => { listCompanyCustomAssessments(company.id).then(setCustomAssessments).catch(() => setCustomAssessments([])); }, [company.id]);
+  useEffect(() => {
+    if (prefillCandidate) onPrefillConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const selectBundle = (ids) => setSelected(ids);
@@ -490,7 +497,7 @@ export default function AssessmentsPage({ company, user }) {
     return (
       <Page size="wide">
         <PageHeader eyebrow="Assessments" title="Send Assessments" description="Review the selected assessments and add candidates below." />
-        <SendForm selected={selected} library={library} company={company} user={user} onCancel={() => setSendingOpen(false)} onSent={handleSent} />
+        <SendForm selected={selected} library={library} company={company} user={user} onCancel={() => setSendingOpen(false)} onSent={handleSent} initialCandidate={pendingCandidate} />
       </Page>
     );
   }
@@ -503,6 +510,14 @@ export default function AssessmentsPage({ company, user }) {
         description="Send skills assessments to candidates and track completion and results."
       />
       <UsageGauge company={company} />
+      {pendingCandidate && tab === "library" && (
+        <Card style={{ marginBottom: 16, borderColor: "var(--jv-color-primary)" }}>
+          <div style={{ fontSize: 13 }}>
+            Choose one or more assessments below, then <strong>Send Assessments</strong> to send them to{" "}
+            <strong>{pendingCandidate.first} {pendingCandidate.last}</strong> ({pendingCandidate.email}).
+          </div>
+        </Card>
+      )}
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       <div style={{ marginTop: 16 }}>
         {tab === "library" && <LibraryTab selected={selected} onToggle={toggle} onSelectBundle={selectBundle} bundles={bundles} library={library} />}

@@ -249,6 +249,14 @@ export async function updateApplicationStage(applicationId, toStage, changedBy, 
   });
 }
 
+export async function sendCandidateMessage(applicationId, subject, body) {
+  return edgeFetch("send-candidate-message", { applicationId, subject, body });
+}
+
+export async function inviteToInterview(applicationId, { scheduledAt, durationMinutes, location, meetingLink }) {
+  return edgeFetch("invite-to-interview", { applicationId, scheduledAt, durationMinutes, location, meetingLink });
+}
+
 export async function addCandidateNote(applicationId, authorId, body, noteType = "internal") {
   const { data, error } = await supabase
     .from("candidate_notes")
