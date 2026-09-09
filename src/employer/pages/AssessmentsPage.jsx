@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Send, RotateCw } from "lucide-react";
+import { Send, RotateCw, Link2, X } from "lucide-react";
 import {
   Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, EmptyState,
 } from "../../components/ui/index.js";
 import {
   listAssessmentInvitations, createAssessmentInvitations, resendAssessmentInvitation, listJobs,
+  getAssessmentLink, getAssessmentResult,
 } from "../lib/employerApi.js";
 
 const ASSESSMENT_LIBRARY = [
@@ -156,9 +157,74 @@ function SendForm({ selected, company, user, onCancel, onSent }) {
   );
 }
 
+function ResultDrawer({ invitation, onClose }) {
+  const [result, setResult] = useState(undefined); // undefined = loading, null = not started
+
+  useEffect(() => { getAssessmentResult(invitation.id).then(setResult); }, [invitation.id]);
+
+  return (
+    <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: 520, background: "#fff", boxShadow: "var(--jv-shadow-lg)", padding: 28, overflowY: "auto", zIndex: 100 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{invitation.candidate_name}</h2>
+          <div style={{ fontSize: 12, color: "var(--jv-color-muted)" }}>{invitation.candidate_email}</div>
+        </div>
+        <Button variant="ghost" size="sm" icon={X} onClick={onClose}>Close</Button>
+      </div>
+
+      {result === undefined && <div>Loading results…</div>}
+      {result === null && <EmptyState title="Not started yet" description="This candidate hasn't opened the assessment link yet." />}
+
+      {result && result.scores.map(score => {
+        const responsesForAssessment = result.responses.filter(r => r.assessment_slug === score.assessment_slug);
+        const writtenResponses = responsesForAssessment.filter(r => r.question_type === "long_form_written");
+        return (
+          <div key={score.id} style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <strong style={{ fontSize: 14, textTransform: "capitalize" }}>{score.assessment_slug.replace("-", " ")}</strong>
+              <Badge tone={score.passed ? "success" : "danger"}>{Math.round(score.overall_score)}% · {score.passed ? "Pass" : "Below Threshold"}</Badge>
+            </div>
+
+            {Object.keys(score.metrics || {}).length > 0 && (
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10, fontSize: 12, color: "var(--jv-color-muted)" }}>
+                {Object.entries(score.metrics).map(([k, v]) => <span key={k}>{k.replace(/_/g, " ")}: <strong style={{ color: "var(--jv-color-heading)" }}>{v}</strong></span>)}
+              </div>
+            )}
+
+            {(score.assessment_section_scores || []).map(s => (
+              <div key={s.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: "1px solid var(--jv-color-border)" }}>
+                <span>{s.section_name}</span>
+                <span style={{ color: "var(--jv-color-muted)" }}>{s.points_earned}/{s.points_possible} ({Math.round(s.percentage)}%)</span>
+              </div>
+            ))}
+
+            {writtenResponses.map(r => (
+              <div key={r.id} style={{ marginTop: 12, padding: 12, background: "var(--jv-color-slate-50)", borderRadius: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--jv-color-muted)", marginBottom: 6 }}>CANDIDATE RESPONSE</div>
+                <div style={{ fontSize: 13, whiteSpace: "pre-wrap", marginBottom: 10 }}>{r.response?.text}</div>
+                {r.ai_result && (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--jv-color-muted)", marginBottom: 4 }}>AI RUBRIC SCORE</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                      {Object.entries(r.ai_result.criteria || {}).map(([k, v]) => <Badge key={k} tone="neutral">{k}: {v}</Badge>)}
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--jv-color-muted)", margin: 0 }}>{r.ai_result.summary}</p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function SentTab({ company }) {
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState(null);
+  const [viewingId, setViewingId] = useState(null);
 
   const reload = () => {
     if (!company?.id) return;
@@ -167,10 +233,18 @@ function SentTab({ company }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { reload(); }, [company?.id]);
 
+  const copyLink = (inv) => {
+    navigator.clipboard.writeText(getAssessmentLink(inv));
+    setCopiedId(inv.id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
+
   if (loading) return <Card>Loading invitations…</Card>;
   if (invitations.length === 0) {
     return <EmptyState title="No assessments sent yet" description="Select assessments from the library and send them to candidates to see status here." />;
   }
+
+  const viewing = invitations.find(i => i.id === viewingId);
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -189,12 +263,20 @@ function SentTab({ company }) {
                 {inv.due_date ? ` · Due ${new Date(inv.due_date).toLocaleDateString()}` : ""}
               </div>
             </div>
-            {inv.status !== "completed" && (
-              <Button size="sm" variant="secondary" icon={RotateCw} onClick={() => resendAssessmentInvitation(inv.id).then(reload)}>Resend</Button>
-            )}
+            <div style={{ display: "flex", gap: 6 }}>
+              {inv.status === "completed" ? (
+                <Button size="sm" variant="secondary" onClick={() => setViewingId(inv.id)}>View Results</Button>
+              ) : (
+                <>
+                  <Button size="sm" variant="secondary" icon={Link2} onClick={() => copyLink(inv)}>{copiedId === inv.id ? "Copied!" : "Copy Link"}</Button>
+                  <Button size="sm" variant="secondary" icon={RotateCw} onClick={() => resendAssessmentInvitation(inv.id).then(reload)}>Resend</Button>
+                </>
+              )}
+            </div>
           </div>
         </Card>
       ))}
+      {viewing && <ResultDrawer invitation={viewing} onClose={() => setViewingId(null)} />}
     </div>
   );
 }

@@ -438,3 +438,29 @@ export async function resendAssessmentInvitation(invitationId) {
   const { error } = await supabase.from("assessment_invitations").update({ status: "sent" }).eq("id", invitationId);
   if (error) throw error;
 }
+
+// Candidate-facing assessment link. Real branded email delivery isn't wired
+// up yet (needs a transactional email provider) — surfacing the direct
+// link lets an employer share it manually in the meantime.
+export function getAssessmentLink(invitation) {
+  return `${window.location.origin}/assessment.html?t=${invitation.invite_token}`;
+}
+
+export async function getAssessmentResult(invitationId) {
+  const { data: attempt, error: attemptError } = await supabase
+    .from("assessment_attempts")
+    .select("*")
+    .eq("invitation_id", invitationId)
+    .maybeSingle();
+  if (attemptError) throw attemptError;
+  if (!attempt) return null;
+
+  const [{ data: scores, error: scoresError }, { data: responses, error: responsesError }] = await Promise.all([
+    supabase.from("assessment_scores").select("*, assessment_section_scores(*)").eq("attempt_id", attempt.id),
+    supabase.from("assessment_responses").select("*").eq("attempt_id", attempt.id),
+  ]);
+  if (scoresError) throw scoresError;
+  if (responsesError) throw responsesError;
+
+  return { attempt, scores: scores || [], responses: responses || [] };
+}
