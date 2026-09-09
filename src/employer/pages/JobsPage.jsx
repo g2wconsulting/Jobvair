@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Sparkles, Copy, Pause, Play, Archive, XCircle, Pencil } from "lucide-react";
+import { Plus, Sparkles, Copy, Pause, Play, Archive, XCircle, Pencil, Share2 } from "lucide-react";
 import {
   Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, TextArea,
   CheckGroup, EmptyState,
@@ -169,6 +169,13 @@ export default function JobsPage({ company, user }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // null | "new" | job
+  const [copiedJobId, setCopiedJobId] = useState(null);
+
+  const copyPublicLink = (job) => {
+    navigator.clipboard.writeText(`${window.location.origin}/jobs/${job.slug}`);
+    setCopiedJobId(job.id);
+    setTimeout(() => setCopiedJobId(null), 1500);
+  };
 
   const reload = () => {
     if (!company?.id) return;
@@ -231,6 +238,11 @@ export default function JobsPage({ company, user }) {
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
                 <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(job)}>Edit</Button>
+                {job.status === "published" && (
+                  <Button size="sm" variant="secondary" icon={Share2} onClick={() => copyPublicLink(job)}>
+                    {copiedJobId === job.id ? "Copied!" : "Copy Public Link"}
+                  </Button>
+                )}
                 {job.status === "published" && <Button size="sm" variant="secondary" icon={Pause} onClick={() => setJobStatus(job.id, "paused").then(reload)}>Pause</Button>}
                 {job.status === "paused" && <Button size="sm" variant="secondary" icon={Play} onClick={() => setJobStatus(job.id, "published").then(reload)}>Resume</Button>}
                 {job.status === "draft" && <Button size="sm" icon={Play} onClick={() => setJobStatus(job.id, "published").then(reload)}>Publish</Button>}

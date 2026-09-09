@@ -3,6 +3,7 @@ import { ArrowLeft, MapPin, Briefcase, DollarSign } from "lucide-react";
 import { Badge, Button, Spinner, EmptyState } from "../components/ui/index.js";
 import { getPublicJobBySlug } from "../lib/publicJobsApi.js";
 import { setPageMeta, setJsonLd, clearJsonLd } from "../lib/seo.js";
+import ShareButtons from "../components/ShareButtons.jsx";
 
 function formatSalary(job) {
   if (!job.salary_min && !job.salary_max) return null;
@@ -95,7 +96,10 @@ export default function PublicJobDetailPage({ slug, onBack }) {
               {formatSalary(job) && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><DollarSign size={14} /> {formatSalary(job)}</span>}
             </div>
 
-            <Button onClick={() => { window.location.href = "/"; }} style={{ marginBottom: 32 }}>Apply Now</Button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", marginBottom: 32 }}>
+              <Button onClick={() => { window.location.href = "/"; }}>Apply Now</Button>
+              <ShareButtons url={`${window.location.origin}/jobs/${job.slug}`} title={`${job.title} at ${job.companies?.name || "this employer"}`} />
+            </div>
 
             {job.description && <Section title="About the role" body={job.description} />}
             {job.responsibilities && <Section title="Responsibilities" body={job.responsibilities} />}
