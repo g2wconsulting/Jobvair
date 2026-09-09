@@ -168,8 +168,20 @@ function QuestionEditor({ question, onSave, onCancel }) {
   );
 }
 
+// Company-authored questions must live in one of that company's own
+// question banks (RLS keys off question_banks.company_id) — this
+// get-or-creates a single default bank per company the first time they
+// add a question, rather than making them manage banks explicitly.
+async function getOrCreateCompanyQuestionBank(companyId) {
+  const { data: existing } = await supabase.from("question_banks").select("id").eq("company_id", companyId).limit(1).maybeSingle();
+  if (existing) return existing.id;
+  const { data: created, error } = await supabase.from("question_banks").insert({ company_id: companyId, name: "Custom Questions" }).select().single();
+  if (error) throw error;
+  return created.id;
+}
+
 // ── Section editor (list of questions) ──────────────────────────────────────
-function SectionEditor({ section, onSave, onDelete }) {
+function SectionEditor({ section, onSave, onDelete, companyId }) {
   const [name, setName] = useState(section.name);
   const [weight, setWeight] = useState(section.weight ?? 1);
   const [questionsToDraw, setQuestionsToDraw] = useState(section.questions_to_draw ?? "");
@@ -195,7 +207,12 @@ function SectionEditor({ section, onSave, onDelete }) {
 
   const saveQuestion = async (payload) => {
     if (editingQ === "new") {
-      const { data: q, error } = await supabase.from("questions").insert({ type: payload.type, prompt: payload.prompt, points: payload.points, correct_answer: payload.correct_answer, rubric: payload.rubric }).select().single();
+      let questionBankId = null;
+      if (companyId) {
+        try { questionBankId = await getOrCreateCompanyQuestionBank(companyId); }
+        catch (err) { alert(err.message); return; }
+      }
+      const { data: q, error } = await supabase.from("questions").insert({ question_bank_id: questionBankId, type: payload.type, prompt: payload.prompt, points: payload.points, correct_answer: payload.correct_answer, rubric: payload.rubric }).select().single();
       if (error) { alert(error.message); return; }
       if (payload.options?.length) {
         await supabase.from("question_options").insert(payload.options.map((o, i) => ({ question_id: q.id, label: o.label, value: o.label, is_correct: o.is_correct, display_order: i })));
@@ -260,7 +277,7 @@ function SectionEditor({ section, onSave, onDelete }) {
 }
 
 // ── Assessment editor (metadata + sections) ─────────────────────────────────
-function AssessmentEditor({ assessment, adminUser, onBack, onChanged }) {
+function AssessmentEditor({ assessment, adminUser, companyId, onBack, onChanged }) {
   const [form, setForm] = useState({ ...assessment });
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -360,11 +377,16 @@ function AssessmentEditor({ assessment, adminUser, onBack, onChanged }) {
         </div>
         <div style={{ marginBottom: 14 }}><TextArea label="Description" value={form.description || ""} onChange={v => set("description", v)} rows={2} /></div>
         <div style={{ marginBottom: 14 }}><TextArea label="Instructions (shown to candidate)" value={form.instructions || ""} onChange={v => set("instructions", v)} rows={2} /></div>
+        <div style={{ marginBottom: 14 }}><TextArea label="Eligibility requirements (shown to candidate before starting; blank = none)" value={form.eligibility_requirements || ""} onChange={v => set("eligibility_requirements", v)} rows={2} placeholder="e.g. Must hold a current notary commission in the State of Maryland." /></div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
           <Select label="Category" value={form.category} onChange={v => set("category", v)} options={CATEGORIES.map(c => ({ value: c, label: c }))} />
           <Select label="Status" value={form.status} onChange={v => set("status", v)} options={["draft", "published", "archived"].map(s => ({ value: s, label: s }))} />
           <Input label="Estimated Minutes" type="number" value={form.estimated_minutes || ""} onChange={v => set("estimated_minutes", Number(v))} />
           <Input label="Passing Score %" type="number" value={form.passing_score ?? 70} onChange={v => set("passing_score", Number(v))} />
+        </div>
+        <div style={{ marginBottom: 14, maxWidth: 260 }}>
+          <Input label="Time Limit (minutes, blank = none)" type="number" value={form.time_limit_minutes || ""} onChange={v => set("time_limit_minutes", v === "" ? null : Number(v))}
+            hint="Only enforced when every assessment in a send has a limit set." />
         </div>
         <div style={{ display: "flex", gap: 20, marginBottom: 18 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: A.textLight, cursor: "pointer" }}>
@@ -388,7 +410,7 @@ function AssessmentEditor({ assessment, adminUser, onBack, onChanged }) {
         <Btn small onClick={addSection}>+ Add Section</Btn>
       </div>
       {loading ? <div style={{ color: A.textMuted }}>Loading…</div> : sections.map(s => (
-        <SectionEditorWrapper key={s.id} section={s} onDelete={deleteSection} />
+        <SectionEditorWrapper key={s.id} section={s} onDelete={deleteSection} companyId={companyId} />
       ))}
     </div>
   );
@@ -396,7 +418,7 @@ function AssessmentEditor({ assessment, adminUser, onBack, onChanged }) {
 
 // Fetches a section's questions once, then hands off to SectionEditor —
 // keeps AssessmentEditor from needing to know question shape.
-function SectionEditorWrapper({ section, onDelete }) {
+function SectionEditorWrapper({ section, onDelete, companyId }) {
   const [questions, setQuestions] = useState(null);
   useEffect(() => {
     supabase
@@ -408,7 +430,7 @@ function SectionEditorWrapper({ section, onDelete }) {
   }, [section.id]);
 
   if (questions === null) return <Card style={{ marginBottom: 14 }}>Loading section…</Card>;
-  return <SectionEditor section={{ ...section, questions }} onDelete={onDelete} />;
+  return <SectionEditor section={{ ...section, questions }} onDelete={onDelete} companyId={companyId} />;
 }
 
 // ── Bundles tab ──────────────────────────────────────────────────────────────
@@ -514,18 +536,27 @@ function BundlesTab({ adminUser }) {
 }
 
 // ── Assessments tab ──────────────────────────────────────────────────────────
-function AssessmentsTab({ adminUser }) {
+// companyId is null for Jobvair's global admin console (manages the shared
+// master library) and set for an employer's own "My Assessments" builder
+// (scoped entirely to that company's private content — see
+// 0018_employer_owned_assessments.sql for the RLS that enforces this).
+function AssessmentsTab({ adminUser, companyId = null }) {
   const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // null | "new" | assessment
 
   const reload = () => {
-    supabase.from("assessments").select("*").order("category").order("name").then(({ data }) => { setAssessments(data || []); setLoading(false); });
+    let query = supabase.from("assessments").select("*").order("category").order("name");
+    query = companyId ? query.eq("company_id", companyId) : query.is("company_id", null);
+    query.then(({ data }) => { setAssessments(data || []); setLoading(false); });
   };
-  useEffect(reload, []);
+  useEffect(reload, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createNew = async () => {
-    const { data, error } = await supabase.from("assessments").insert({ ...EMPTY_ASSESSMENT, slug: `new-assessment-${uniqueSlugSuffix()}`, created_by: adminUser?.id }).select().single();
+    const { data, error } = await supabase.from("assessments").insert({
+      ...EMPTY_ASSESSMENT, slug: `${companyId ? `custom-${companyId.slice(0, 8)}` : "new-assessment"}-${uniqueSlugSuffix()}`,
+      company_id: companyId, created_by: adminUser?.id,
+    }).select().single();
     if (error) { alert(error.message); return; }
     setEditing(data);
     reload();
@@ -536,7 +567,8 @@ function AssessmentsTab({ adminUser }) {
       slug: `${assessment.slug}-copy-${uniqueSlugSuffix()}`, name: `${assessment.name} (Copy)`, category: assessment.category,
       description: assessment.description, status: "draft", estimated_minutes: assessment.estimated_minutes,
       passing_score: assessment.passing_score, scoring_method: assessment.scoring_method, instructions: assessment.instructions,
-      randomize_questions: assessment.randomize_questions, randomize_options: assessment.randomize_options, created_by: adminUser?.id,
+      randomize_questions: assessment.randomize_questions, randomize_options: assessment.randomize_options,
+      company_id: companyId, created_by: adminUser?.id,
     }).select().single();
     if (error) { alert(error.message); return; }
 
@@ -564,7 +596,7 @@ function AssessmentsTab({ adminUser }) {
   };
 
   if (editing) {
-    return <AssessmentEditor assessment={editing} adminUser={adminUser} onBack={() => { setEditing(null); reload(); }} onChanged={reload} />;
+    return <AssessmentEditor assessment={editing} adminUser={adminUser} companyId={companyId} onBack={() => { setEditing(null); reload(); }} onChanged={reload} />;
   }
 
   if (loading) return <div style={{ color: A.textMuted }}>Loading assessments…</div>;
@@ -597,20 +629,29 @@ function AssessmentsTab({ adminUser }) {
 }
 
 // ── Root ──────────────────────────────────────────────────────────────────
-export default function AssessmentsAdminPage({ adminUser }) {
+// companyId is omitted for Jobvair's own admin console (manages the shared
+// master library + bundles) and passed by the employer-side wrapper
+// (src/employer/pages/AssessmentBuilderPage.jsx) to scope everything to
+// that company's own private assessments — bundles stay Jobvair-managed
+// only, so that tab is hidden in company mode.
+export default function AssessmentsAdminPage({ adminUser, companyId = null }) {
   const [tab, setTab] = useState("assessments");
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: A.text, marginBottom: 4 }}>Assessment Library</div>
-        <div style={{ fontSize: 14, color: A.textMuted }}>Manage Jobvair's prebuilt assessments, question banks, and bundles.</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: A.text, marginBottom: 4 }}>{companyId ? "Your Assessments" : "Assessment Library"}</div>
+        <div style={{ fontSize: 14, color: A.textMuted }}>
+          {companyId ? "Create and manage your own custom assessments and questions, in addition to Jobvair's prebuilt library." : "Manage Jobvair's prebuilt assessments, question banks, and bundles."}
+        </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <Btn small variant={tab === "assessments" ? "primary" : "secondary"} onClick={() => setTab("assessments")}>Assessments</Btn>
-        <Btn small variant={tab === "bundles" ? "primary" : "secondary"} onClick={() => setTab("bundles")}>Bundles</Btn>
-      </div>
-      {tab === "assessments" && <AssessmentsTab adminUser={adminUser} />}
-      {tab === "bundles" && <BundlesTab adminUser={adminUser} />}
+      {!companyId && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <Btn small variant={tab === "assessments" ? "primary" : "secondary"} onClick={() => setTab("assessments")}>Assessments</Btn>
+          <Btn small variant={tab === "bundles" ? "primary" : "secondary"} onClick={() => setTab("bundles")}>Bundles</Btn>
+        </div>
+      )}
+      {tab === "assessments" && <AssessmentsTab adminUser={adminUser} companyId={companyId} />}
+      {!companyId && tab === "bundles" && <BundlesTab adminUser={adminUser} />}
     </div>
   );
 }

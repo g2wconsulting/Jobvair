@@ -86,6 +86,23 @@ Deno.serve(async request => {
     if (invitation.status === "sent") {
       await supabase.from("assessment_invitations").update({ status: "in_progress" }).eq("id", invitation.id);
     }
+
+    // Set the overall time limit once, at creation — only when every
+    // included assessment has one configured. This timestamp is what
+    // submit-assessment-response actually enforces; a client-side
+    // countdown alone couldn't stop a direct API call.
+    const { data: limitRows } = await supabase
+      .from("assessments")
+      .select("time_limit_minutes")
+      .in("slug", invitation.assessment_ids || [])
+      .eq("status", "published");
+    const allHaveLimits = limitRows && limitRows.length > 0 && limitRows.every(r => r.time_limit_minutes);
+    if (allHaveLimits) {
+      const totalMinutes = limitRows.reduce((s, r) => s + r.time_limit_minutes, 0);
+      const expiresAt = new Date(Date.now() + totalMinutes * 60000).toISOString();
+      const { data: withLimit } = await supabase.from("assessment_attempts").update({ time_limit_expires_at: expiresAt }).eq("id", attempt.id).select().single();
+      if (withLimit) attempt = withLimit;
+    }
   }
 
   if (body?.certify && !attempt.certification_accepted_at) {
@@ -113,7 +130,7 @@ Deno.serve(async request => {
   const slugs: string[] = invitation.assessment_ids || [];
   const { data: assessments } = await supabase
     .from("assessments")
-    .select("id, slug, name, instructions, estimated_minutes, randomize_questions, randomize_options, current_version_id, assessment_sections(id, name, display_order, questions_to_draw, weight)")
+    .select("id, slug, name, instructions, estimated_minutes, time_limit_minutes, eligibility_requirements, randomize_questions, randomize_options, current_version_id, assessment_sections(id, name, display_order, questions_to_draw, weight)")
     .in("slug", slugs)
     .eq("status", "published");
 
@@ -231,6 +248,8 @@ Deno.serve(async request => {
         name: assessment.name,
         instructions: assessment.instructions,
         estimated_minutes: assessment.estimated_minutes,
+        time_limit_minutes: assessment.time_limit_minutes,
+        eligibility_requirements: assessment.eligibility_requirements,
         sections: sectionPayloads,
       });
     }
@@ -247,6 +266,7 @@ Deno.serve(async request => {
     employer_name: employerName,
     candidate_name: invitation.candidate_name,
     due_date: invitation.due_date,
+    time_limit_expires_at: attempt.time_limit_expires_at,
     assessments: assessmentPayloads,
   }, { headers: corsHeaders });
 });

@@ -51,7 +51,7 @@ Deno.serve(async request => {
 
   const { data: attempt } = await supabase
     .from("assessment_attempts")
-    .select("id, status, question_selection, assessment_version_ids, certification_accepted_at")
+    .select("id, status, question_selection, assessment_version_ids, certification_accepted_at, time_limit_expires_at")
     .eq("invitation_id", invitation.id)
     .maybeSingle();
   if (!attempt) return Response.json({ error: "Assessment not started yet." }, { status: 404, headers: corsHeaders });
@@ -60,6 +60,9 @@ Deno.serve(async request => {
   }
   if (attempt.status !== "in_progress") {
     return Response.json({ error: "This assessment has already been submitted." }, { status: 409, headers: corsHeaders });
+  }
+  if (attempt.time_limit_expires_at && new Date(attempt.time_limit_expires_at) < new Date()) {
+    return Response.json({ error: "The time limit for this assessment has been reached.", expired: true }, { status: 403, headers: corsHeaders });
   }
 
   // Derive which section this question was drawn into for THIS attempt —

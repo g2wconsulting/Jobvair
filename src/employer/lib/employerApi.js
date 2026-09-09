@@ -458,6 +458,29 @@ export async function listPublishedBundles() {
   }));
 }
 
+// This company's own custom assessments (built via the Assessment
+// Builder), shaped to match the static ASSESSMENT_LIBRARY cards so the
+// Library tab can render both side by side.
+export async function listCompanyCustomAssessments(companyId) {
+  const { data, error } = await supabase
+    .from("assessments")
+    .select("slug, name, category, description, icon, estimated_minutes")
+    .eq("company_id", companyId)
+    .eq("status", "published")
+    .order("name");
+  if (error) throw error;
+  return (data || []).map(a => ({
+    id: a.slug,
+    name: a.name,
+    icon: a.icon || "🧩",
+    category: a.category,
+    minutes: a.estimated_minutes || 0,
+    questions: null,
+    description: a.description || "",
+    custom: true,
+  }));
+}
+
 export async function getAssessmentLicense(companyId) {
   const { data, error } = await supabase.from("assessment_licenses").select("*").eq("company_id", companyId).maybeSingle();
   if (error) throw error;

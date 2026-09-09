@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   LayoutDashboard, Briefcase, Users, GitBranch, LineChart, Building2,
-  CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck,
+  CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck, Wrench,
 } from "lucide-react";
 import { EMPLOYER_NAV } from "../constants.js";
 import "../../components/Sidebar.css";
@@ -11,6 +11,7 @@ const NAV_ICONS = {
   jobs: Briefcase,
   candidates: Users,
   assessments: ClipboardCheck,
+  "assessment-builder": Wrench,
   hiring: GitBranch,
   intelligence: LineChart,
   company: Building2,

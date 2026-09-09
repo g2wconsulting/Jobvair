@@ -19,6 +19,10 @@ export async function assessmentFetch(path, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || data.message || `Server error ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.error || data.message || `Server error ${res.status}`);
+    if (data.expired) err.expired = true;
+    throw err;
+  }
   return data;
 }

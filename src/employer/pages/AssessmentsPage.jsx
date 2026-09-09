@@ -6,6 +6,7 @@ import {
 import {
   listAssessmentInvitations, createAssessmentInvitations, resendAssessmentInvitation, listJobs,
   getAssessmentLink, getAssessmentResult, listPublishedBundles, getAssessmentLicense, listCompanyAssessmentScores,
+  listCompanyCustomAssessments,
 } from "../lib/employerApi.js";
 import { exportResultsCSV, exportResultsExcel, exportCandidatePdf } from "../lib/assessmentExports.js";
 
@@ -37,12 +38,12 @@ const TABS = [
 const STATUS_TONE = { sent: "neutral", in_progress: "warning", completed: "success", expired: "danger" };
 const STATUS_LABEL = { sent: "Invited", in_progress: "In Progress", completed: "Completed", expired: "Expired" };
 
-function LibraryTab({ selected, onToggle, onSelectBundle, bundles }) {
+function LibraryTab({ selected, onToggle, onSelectBundle, bundles, library }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const categories = ["all", ...new Set(ASSESSMENT_LIBRARY.map(a => a.category))];
+  const categories = ["all", ...new Set(library.map(a => a.category))];
 
-  const filtered = ASSESSMENT_LIBRARY.filter(a => {
+  const filtered = library.filter(a => {
     const matchCat = category === "all" || a.category === category;
     const matchSearch = !search || a.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
@@ -59,7 +60,7 @@ function LibraryTab({ selected, onToggle, onSelectBundle, bundles }) {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <Button size="sm" variant="secondary" onClick={() => onSelectBundle(ASSESSMENT_LIBRARY.map(a => a.id))}>Select All</Button>
+        <Button size="sm" variant="secondary" onClick={() => onSelectBundle(library.map(a => a.id))}>Select All</Button>
         {selected.length > 0 && <Button size="sm" variant="ghost" onClick={() => onSelectBundle([])}>Clear Selection</Button>}
       </div>
 
@@ -85,7 +86,10 @@ function LibraryTab({ selected, onToggle, onSelectBundle, bundles }) {
                 <Badge tone={CATEGORY_TONE[a.category] || "neutral"}>{a.category}</Badge>
               </div>
               <p style={{ fontSize: 12, color: "var(--jv-color-muted)", margin: "0 0 8px" }}>{a.description}</p>
-              <div style={{ fontSize: 12, color: "var(--jv-color-muted)" }}>⏱ {a.minutes} min · {a.questions} {a.questions === 1 ? "task" : "questions"}</div>
+              <div style={{ fontSize: 12, color: "var(--jv-color-muted)", display: "flex", alignItems: "center", gap: 6 }}>
+                <span>⏱ {a.minutes} min{a.questions != null ? ` · ${a.questions} ${a.questions === 1 ? "task" : "questions"}` : ""}</span>
+                {a.custom && <Badge tone="neutral">Custom</Badge>}
+              </div>
             </Card>
           );
         })}
@@ -94,8 +98,8 @@ function LibraryTab({ selected, onToggle, onSelectBundle, bundles }) {
   );
 }
 
-function SendForm({ selected, company, user, onCancel, onSent }) {
-  const assessments = ASSESSMENT_LIBRARY.filter(a => selected.includes(a.id));
+function SendForm({ selected, library, company, user, onCancel, onSent }) {
+  const assessments = library.filter(a => selected.includes(a.id));
   const [jobs, setJobs] = useState([]);
   const [candidates, setCandidates] = useState([{ first: "", last: "", email: "", jobId: "" }]);
   const [dueDate, setDueDate] = useState("");
@@ -387,8 +391,11 @@ export default function AssessmentsPage({ company, user }) {
   const [selected, setSelected] = useState([]);
   const [sendingOpen, setSendingOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
+  const [customAssessments, setCustomAssessments] = useState([]);
+  const library = [...ASSESSMENT_LIBRARY, ...customAssessments];
 
   useEffect(() => { listPublishedBundles().then(setBundles).catch(() => setBundles([])); }, []);
+  useEffect(() => { listCompanyCustomAssessments(company.id).then(setCustomAssessments).catch(() => setCustomAssessments([])); }, [company.id]);
 
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const selectBundle = (ids) => setSelected(ids);
@@ -403,7 +410,7 @@ export default function AssessmentsPage({ company, user }) {
     return (
       <Page size="wide">
         <PageHeader eyebrow="Assessments" title="Send Assessments" description="Review the selected assessments and add candidates below." />
-        <SendForm selected={selected} company={company} user={user} onCancel={() => setSendingOpen(false)} onSent={handleSent} />
+        <SendForm selected={selected} library={library} company={company} user={user} onCancel={() => setSendingOpen(false)} onSent={handleSent} />
       </Page>
     );
   }
@@ -418,7 +425,7 @@ export default function AssessmentsPage({ company, user }) {
       <UsageGauge company={company} />
       <Tabs tabs={TABS} active={tab} onChange={setTab} />
       <div style={{ marginTop: 16 }}>
-        {tab === "library" && <LibraryTab selected={selected} onToggle={toggle} onSelectBundle={selectBundle} bundles={bundles} />}
+        {tab === "library" && <LibraryTab selected={selected} onToggle={toggle} onSelectBundle={selectBundle} bundles={bundles} library={library} />}
         {tab === "sent" && <SentTab company={company} />}
         {tab === "comparison" && <ComparisonTab company={company} />}
       </div>
