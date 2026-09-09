@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Sparkles, Copy, Pause, Play, Archive, XCircle, Pencil, Share2 } from "lucide-react";
+import { Plus, Sparkles, Copy, Pause, Play, Archive, XCircle, Pencil, Share2, Eye, X, MapPin, DollarSign } from "lucide-react";
 import {
   Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, TextArea,
   CheckGroup, EmptyState, Toggle,
@@ -185,11 +185,73 @@ function JobEditor({ job, onSave, onCancel }) {
   );
 }
 
+function formatSalary(job) {
+  if (!job.salary_min && !job.salary_max) return null;
+  const fmt = (n) => `$${Number(n).toLocaleString()}`;
+  if (job.salary_min && job.salary_max) return `${fmt(job.salary_min)} – ${fmt(job.salary_max)}`;
+  return fmt(job.salary_min || job.salary_max);
+}
+
+function PreviewSection({ title, body }) {
+  if (!body) return null;
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--jv-color-heading)", marginBottom: 6 }}>{title}</div>
+      <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--jv-color-text)", margin: 0, whiteSpace: "pre-wrap" }}>{body}</p>
+    </div>
+  );
+}
+
+function JobPreviewModal({ job, company, onClose }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 200, display: "flex", justifyContent: "center", overflowY: "auto", padding: "40px 16px" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: "var(--jv-radius-lg, 14px)", maxWidth: 640, width: "100%", height: "fit-content", padding: 32, position: "relative" }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} aria-label="Close preview" style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", cursor: "pointer", color: "var(--jv-color-muted)" }}>
+          <X size={20} />
+        </button>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--jv-color-primary)", marginBottom: 10 }}>Candidate preview</div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          {company?.logo_url && <img src={company.logo_url} alt="" width={36} height={36} style={{ borderRadius: 8, objectFit: "cover" }} />}
+          <div style={{ fontSize: 13.5, color: "var(--jv-color-muted)", fontWeight: 600 }}>{company?.name}</div>
+        </div>
+
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--jv-color-heading)", margin: "0 0 12px" }}>{job.title || "Untitled role"}</h2>
+
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20, fontSize: 13, color: "var(--jv-color-muted)" }}>
+          {job.location && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><MapPin size={13} /> {job.location}</span>}
+          {job.work_arrangement && <span style={{ textTransform: "capitalize" }}>{job.work_arrangement}</span>}
+          {job.employment_type && <Badge tone="neutral">{job.employment_type}</Badge>}
+          {formatSalary(job) && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><DollarSign size={13} /> {formatSalary(job)}</span>}
+        </div>
+
+        <div style={{ padding: "10px 14px", background: "var(--jv-color-slate-50)", borderRadius: 8, fontSize: 12.5, color: "var(--jv-color-muted)", marginBottom: 20 }}>
+          This is exactly what a candidate sees on your public job page{job.status !== "published" && " once you publish it"}. Editing fields here won't save — close this and use Edit instead.
+        </div>
+
+        <PreviewSection title="About the role" body={job.description} />
+        <PreviewSection title="Responsibilities" body={job.responsibilities} />
+        <PreviewSection title="Minimum qualifications" body={job.min_qualifications} />
+        <PreviewSection title="Preferred qualifications" body={job.preferred_qualifications} />
+        <PreviewSection title="Benefits" body={job.benefits} />
+        {!job.description && !job.responsibilities && !job.min_qualifications && (
+          <div style={{ fontSize: 13.5, color: "var(--jv-color-muted)", fontStyle: "italic" }}>No description added yet — candidates will just see the title and basics above.</div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <Button variant="secondary" onClick={onClose}>Close Preview</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function JobsPage({ company, user }) {
   const [tab, setTab] = useState("published");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // null | "new" | job
+  const [previewing, setPreviewing] = useState(null); // job | null
   const [copiedJobId, setCopiedJobId] = useState(null);
 
   const copyPublicLink = (job) => {
@@ -243,7 +305,7 @@ export default function JobsPage({ company, user }) {
         ) : filtered.map(job => (
           <Card key={job.id}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-              <div>
+              <div style={{ cursor: "pointer" }} onClick={() => setPreviewing(job)}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <strong style={{ fontSize: 16, color: "var(--jv-color-heading)" }}>{job.title}</strong>
                   <Badge tone={STATUS_TONE[job.status]}>{job.status}</Badge>
@@ -258,6 +320,7 @@ export default function JobsPage({ company, user }) {
                 )}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <Button size="sm" variant="secondary" icon={Eye} onClick={() => setPreviewing(job)}>Preview</Button>
                 <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(job)}>Edit</Button>
                 {job.status === "published" && (
                   <Button size="sm" variant="secondary" icon={Share2} onClick={() => copyPublicLink(job)}>
@@ -279,6 +342,8 @@ export default function JobsPage({ company, user }) {
           </Card>
         ))}
       </div>
+
+      {previewing && <JobPreviewModal job={previewing} company={company} onClose={() => setPreviewing(null)} />}
     </Page>
   );
 }
