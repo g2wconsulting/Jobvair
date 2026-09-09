@@ -13,6 +13,7 @@ import { supabase } from "./supabaseClient";
 import { A, font, sans } from "./admin/theme.js";
 import { Card, Badge, Btn, Input, Select, StatCard } from "./admin/ui.jsx";
 import AssessmentsAdminPage from "./admin/AssessmentsAdminPage.jsx";
+import EmployersPage from "./admin/EmployersPage.jsx";
 
 // ── Admin Login ───────────────────────────────────────────────────────────
 function AdminLogin({ onLogin }) {
@@ -617,6 +618,7 @@ function SubscriptionsPage() {
 const NAV = [
   { id: "dashboard",     icon: "◈", label: "Dashboard" },
   { id: "users",         icon: "◉", label: "Users" },
+  { id: "employers",     icon: "⬒", label: "Employers" },
   { id: "subscriptions", icon: "◎", label: "Subscriptions" },
   { id: "templates",     icon: "◫", label: "Templates" },
   { id: "assessments",   icon: "▤", label: "Assessments" },
@@ -699,6 +701,7 @@ export default function AdminApp() {
       <div style={{ flex: 1, padding: 40, overflowY: "auto" }}>
         {page === "dashboard"     && <Dashboard />}
         {page === "users"         && <UsersPage />}
+        {page === "employers"     && <EmployersPage />}
         {page === "subscriptions" && <SubscriptionsPage />}
         {page === "templates"     && <TemplatesPage adminUser={adminUser} />}
         {page === "assessments"   && <AssessmentsAdminPage adminUser={adminUser} />}

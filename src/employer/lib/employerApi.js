@@ -1,5 +1,6 @@
 import { supabase } from "../../supabaseClient";
 import { edgeFetch } from "../../lib/edgeFetch.js";
+import { computeEffectiveFeatures } from "../featureFlags.js";
 
 // ── Companies & memberships ────────────────────────────────────────────────
 export async function getMyMemberships() {
@@ -159,6 +160,35 @@ export async function listApplicationsForCompany(companyId) {
     .order("applied_at", { ascending: false });
   if (error) throw error;
   return data || [];
+}
+
+// Flattened applicant list for pickers (e.g. "send assessment to an
+// applicant") — job_applications has no direct FK to profiles (both
+// reference auth.users independently), so this joins them in JS.
+export async function listApplicantsForCompany(companyId) {
+  const applications = await listApplicationsForCompany(companyId);
+  const candidateIds = [...new Set(applications.map(a => a.candidate_id))];
+  if (candidateIds.length === 0) return [];
+  const { data: profiles, error } = await supabase.from("profiles").select("id, full_name, email").in("id", candidateIds);
+  if (error) throw error;
+  const byId = new Map((profiles || []).map(p => [p.id, p]));
+  return applications
+    .map(a => {
+      const p = byId.get(a.candidate_id);
+      const [first, ...rest] = (p?.full_name || "").trim().split(/\s+/);
+      return {
+        applicationId: a.id,
+        jobId: a.job_id,
+        jobTitle: a.jobs?.title || "General",
+        candidateId: a.candidate_id,
+        first: first || "",
+        last: rest.join(" "),
+        email: p?.email || "",
+        stage: a.current_stage,
+        appliedAt: a.applied_at,
+      };
+    })
+    .filter(a => a.email);
 }
 
 export async function listApplicationsForJob(jobId) {
@@ -398,6 +428,51 @@ export async function getFeatureEntitlements(companyId) {
   const { data, error } = await supabase.from("feature_entitlements").select("*").eq("company_id", companyId);
   if (error) throw error;
   return data || [];
+}
+
+// Combines the company's plan features with its per-company overrides into
+// one effective feature map — see src/employer/featureFlags.js.
+export async function getEffectiveFeatures(companyId) {
+  const [subscription, entitlements] = await Promise.all([
+    getCompanySubscription(companyId),
+    getFeatureEntitlements(companyId),
+  ]);
+  return computeEffectiveFeatures(subscription?.subscription_plans?.features, entitlements);
+}
+
+// ── Super-admin: per-company feature overrides & plan assignment ──────────
+export async function listCompaniesForAdmin() {
+  const { data, error } = await supabase
+    .from("companies")
+    .select("id, name, logo_url, industry, created_at, company_subscriptions(status, plan_id, subscription_plans(id, code, name))")
+    .order("name");
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertFeatureEntitlement(companyId, featureKey, enabled) {
+  const { data, error } = await supabase
+    .from("feature_entitlements")
+    .upsert({ company_id: companyId, feature_key: featureKey, enabled }, { onConflict: "company_id,feature_key" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function clearFeatureEntitlement(companyId, featureKey) {
+  const { error } = await supabase.from("feature_entitlements").delete().eq("company_id", companyId).eq("feature_key", featureKey);
+  if (error) throw error;
+}
+
+export async function setCompanySubscriptionPlan(companyId, planId) {
+  const { data, error } = await supabase
+    .from("company_subscriptions")
+    .upsert({ company_id: companyId, plan_id: planId, status: "active" }, { onConflict: "company_id" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 // ── Dashboard metrics ───────────────────────────────────────────────────

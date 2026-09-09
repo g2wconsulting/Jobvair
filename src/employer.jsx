@@ -13,7 +13,9 @@ import IntelligencePage from "./employer/pages/IntelligencePage.jsx";
 import CompanyPage from "./employer/pages/CompanyPage.jsx";
 import BillingPage from "./employer/pages/BillingPage.jsx";
 import EmployerSettingsPage from "./employer/pages/SettingsPage.jsx";
-import { getMyMemberships, createCompanyAndAdmin, acceptPendingInvitation } from "./employer/lib/employerApi.js";
+import { EMPLOYER_NAV } from "./employer/constants.js";
+import { getMyMemberships, createCompanyAndAdmin, acceptPendingInvitation, getEffectiveFeatures } from "./employer/lib/employerApi.js";
+import { hasFeature } from "./employer/featureFlags.js";
 
 function CreateCompanyScreen({ onCreated }) {
   const [form, setForm] = useState({ name: "", website: "", industry: "", company_size: "", headquarters_location: "" });
@@ -62,6 +64,7 @@ export default function EmployerApp() {
   const [membershipsError, setMembershipsError] = useState("");
   const [page, setPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
+  const [features, setFeatures] = useState(null);
 
   const loadMemberships = async () => {
     setMembershipsError("");
@@ -103,6 +106,15 @@ export default function EmployerApp() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const companyId = activeMembership?.companies?.id;
+    if (!companyId) return;
+    getEffectiveFeatures(companyId).then(setFeatures).catch(err => {
+      console.error("[EmployerApp] getEffectiveFeatures error:", err);
+      setFeatures({});
+    });
+  }, [activeMembership?.companies?.id]);
+
   const handleLogout = async () => { await supabase.auth.signOut(); };
 
   if (authUser === undefined) {
@@ -136,10 +148,16 @@ export default function EmployerApp() {
   const company = activeMembership.companies;
   const user = authUser;
 
+  const navigate = (nextPage) => {
+    const navItem = EMPLOYER_NAV.find(n => n.id === nextPage);
+    if (features && navItem?.featureKey && !hasFeature(features, navItem.featureKey)) return;
+    setPage(nextPage);
+  };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--jv-color-page)", fontFamily: "var(--jv-font-sans)" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <EmployerSidebar active={page} onNav={setPage} company={company} membership={activeMembership} collapsed={collapsed} onCollapse={() => setCollapsed(c => !c)} onLogout={handleLogout} />
+      <EmployerSidebar active={page} onNav={navigate} company={company} membership={activeMembership} collapsed={collapsed} onCollapse={() => setCollapsed(c => !c)} onLogout={handleLogout} features={features} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <div className="jv-topbar">
           <div>
@@ -162,13 +180,13 @@ export default function EmployerApp() {
           </div>
         </div>
         <div style={{ flex: 1, overflowY: "auto" }}>
-          {page === "dashboard"    && <EmployerDashboardPage company={company} onNav={setPage} />}
+          {page === "dashboard"    && <EmployerDashboardPage company={company} onNav={navigate} />}
           {page === "jobs"         && <JobsPage company={company} user={user} />}
-          {page === "candidates"   && <CandidatesPage company={company} user={user} />}
-          {page === "assessments"  && <AssessmentsPage company={company} user={user} />}
-          {page === "assessment-builder" && <AssessmentBuilderPage company={company} user={user} />}
+          {page === "candidates"   && <CandidatesPage company={company} user={user} features={features} />}
+          {page === "assessments"  && hasFeature(features, "assessments") && <AssessmentsPage company={company} user={user} />}
+          {page === "assessment-builder" && hasFeature(features, "assessment_builder") && <AssessmentBuilderPage company={company} user={user} />}
           {page === "hiring"       && <HiringPage company={company} user={user} />}
-          {page === "intelligence" && <IntelligencePage company={company} user={user} />}
+          {page === "intelligence" && hasFeature(features, "market_intelligence") && <IntelligencePage company={company} user={user} />}
           {page === "company"      && <CompanyPage company={company} membership={activeMembership} onCompanyUpdated={loadMemberships} />}
           {page === "billing"      && <BillingPage company={company} />}
           {page === "settings"     && <EmployerSettingsPage user={user} membership={activeMembership} onLogout={handleLogout} />}

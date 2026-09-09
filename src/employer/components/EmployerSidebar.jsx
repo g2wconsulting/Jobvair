@@ -4,6 +4,7 @@ import {
   CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck, Wrench,
 } from "lucide-react";
 import { EMPLOYER_NAV } from "../constants.js";
+import { hasFeature } from "../featureFlags.js";
 import "../../components/Sidebar.css";
 
 const NAV_ICONS = {
@@ -19,9 +20,10 @@ const NAV_ICONS = {
   settings: Settings,
 };
 
-export default function EmployerSidebar({ active, onNav, company, membership, collapsed, onCollapse, onLogout }) {
+export default function EmployerSidebar({ active, onNav, company, membership, collapsed, onCollapse, onLogout, features }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const initials = company?.name ? company.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "CO";
+  const visibleNav = EMPLOYER_NAV.filter(item => !item.featureKey || hasFeature(features, item.featureKey));
 
   return (
     <div className={`jv-sidebar${collapsed ? " jv-sidebar--collapsed" : ""}`}>
@@ -36,7 +38,7 @@ export default function EmployerSidebar({ active, onNav, company, membership, co
       </div>
 
       <nav className="jv-sidebar__nav">
-        {EMPLOYER_NAV.map(item => {
+        {visibleNav.map(item => {
           const Icon = NAV_ICONS[item.id] || LayoutDashboard;
           const isActive = active === item.id;
           return (

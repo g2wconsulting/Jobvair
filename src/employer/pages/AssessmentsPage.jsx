@@ -6,7 +6,7 @@ import {
 import {
   listAssessmentInvitations, createAssessmentInvitations, resendAssessmentInvitation, listJobs,
   getAssessmentLink, getAssessmentResult, listPublishedBundles, getAssessmentLicense, listCompanyAssessmentScores,
-  listCompanyCustomAssessments,
+  listCompanyCustomAssessments, listApplicantsForCompany,
 } from "../lib/employerApi.js";
 import { exportResultsCSV, exportResultsExcel, exportCandidatePdf } from "../lib/assessmentExports.js";
 
@@ -98,6 +98,64 @@ function LibraryTab({ selected, onToggle, onSelectBundle, bundles, library }) {
   );
 }
 
+function ApplicantPicker({ company, existingEmails, onAdd, onClose }) {
+  const [applicants, setApplicants] = useState(null); // null = loading
+  const [checked, setChecked] = useState(new Set());
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    listApplicantsForCompany(company.id).then(setApplicants).catch(err => { setError(err.message); setApplicants([]); });
+  }, [company.id]);
+
+  const toggle = (applicationId) => setChecked(s => {
+    const next = new Set(s);
+    if (next.has(applicationId)) next.delete(applicationId); else next.add(applicationId);
+    return next;
+  });
+
+  const available = (applicants || []).filter(a => !existingEmails.has(a.email.toLowerCase()));
+
+  return (
+    <Card style={{ marginBottom: 16, background: "var(--jv-color-surface-muted, #f8fafc)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--jv-color-heading)" }}>Add from applicants</div>
+        <Button size="sm" variant="ghost" onClick={onClose}>Close</Button>
+      </div>
+      {error && <div style={{ fontSize: 12.5, color: "var(--jv-color-danger-600)", marginBottom: 8 }}>{error}</div>}
+      {applicants === null ? (
+        <div style={{ fontSize: 13, color: "var(--jv-color-muted)" }}>Loading applicants…</div>
+      ) : available.length === 0 ? (
+        <div style={{ fontSize: 13, color: "var(--jv-color-muted)" }}>No applicants available to add — they may already be in the list above, or no one has applied to your jobs yet.</div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gap: 6, maxHeight: 260, overflowY: "auto", marginBottom: 12 }}>
+            {available.map(a => (
+              <label key={a.applicationId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 8, background: "#fff", border: "1px solid var(--jv-color-border)", cursor: "pointer" }}>
+                <input type="checkbox" checked={checked.has(a.applicationId)} onChange={() => toggle(a.applicationId)} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--jv-color-heading)" }}>{a.first} {a.last}</div>
+                  <div style={{ fontSize: 12, color: "var(--jv-color-muted)" }}>{a.email} · applied to {a.jobTitle}</div>
+                </div>
+                <Badge tone="neutral">{a.stage?.replace("_", " ")}</Badge>
+              </label>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            disabled={checked.size === 0}
+            onClick={() => {
+              onAdd(available.filter(a => checked.has(a.applicationId)));
+              onClose();
+            }}
+          >
+            Add {checked.size || ""} Selected
+          </Button>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function SendForm({ selected, library, company, user, onCancel, onSent }) {
   const assessments = library.filter(a => selected.includes(a.id));
   const [jobs, setJobs] = useState([]);
@@ -105,12 +163,21 @@ function SendForm({ selected, library, company, user, onCancel, onSent }) {
   const [dueDate, setDueDate] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => { listJobs(company.id).then(setJobs).catch(() => setJobs([])); }, [company.id]);
 
   const setCandidate = (i, key, val) => setCandidates(c => c.map((row, idx) => idx === i ? { ...row, [key]: val } : row));
   const addCandidate = () => setCandidates(c => [...c, { first: "", last: "", email: "", jobId: "" }]);
   const removeCandidate = (i) => setCandidates(c => c.filter((_, idx) => idx !== i));
+
+  const addFromApplicants = (picked) => {
+    setCandidates(c => {
+      const isBlankStarter = c.length === 1 && !c[0].first && !c[0].last && !c[0].email;
+      const base = isBlankStarter ? [] : c;
+      return [...base, ...picked.map(a => ({ first: a.first, last: a.last, email: a.email, jobId: a.jobId || "" }))];
+    });
+  };
 
   const submit = async () => {
     const valid = candidates.filter(c => c.email.trim() && c.first.trim());
@@ -142,6 +209,16 @@ function SendForm({ selected, library, company, user, onCancel, onSent }) {
       <Input label="Due date (optional)" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ maxWidth: 220, marginBottom: 20 }} />
 
       <div style={{ fontSize: 13, fontWeight: 700, color: "var(--jv-color-heading)", marginBottom: 10 }}>Candidates</div>
+
+      {showPicker && (
+        <ApplicantPicker
+          company={company}
+          existingEmails={new Set(candidates.map(c => c.email.trim().toLowerCase()).filter(Boolean))}
+          onAdd={addFromApplicants}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
       <div style={{ display: "grid", gap: 12, marginBottom: 12 }}>
         {candidates.map((c, i) => (
           <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.4fr 1fr auto", gap: 8, alignItems: "start" }}>
@@ -154,7 +231,10 @@ function SendForm({ selected, library, company, user, onCancel, onSent }) {
           </div>
         ))}
       </div>
-      <Button size="sm" variant="secondary" onClick={addCandidate} style={{ marginBottom: 20 }}>Add Another Candidate</Button>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        <Button size="sm" variant="secondary" onClick={addCandidate}>Add Another Candidate</Button>
+        {!showPicker && <Button size="sm" variant="secondary" onClick={() => setShowPicker(true)}>Add from Applicants</Button>}
+      </div>
 
       {error && <div style={{ marginBottom: 14, fontSize: 13, color: "var(--jv-color-danger-600)" }}>{error}</div>}
 
