@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Send, RotateCw, Link2, X, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Send, RotateCw, Link2, X, Download, FileSpreadsheet, FileText, Trash2 } from "lucide-react";
 import {
   Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, EmptyState, ProgressBar,
 } from "../../components/ui/index.js";
 import {
   listAssessmentInvitations, createAssessmentInvitations, resendAssessmentInvitation, listJobs,
   getAssessmentLink, getAssessmentResult, listPublishedBundles, getAssessmentLicense, listCompanyAssessmentScores,
-  listCompanyCustomAssessments, listApplicantsForCompany,
+  listCompanyCustomAssessments, listApplicantsForCompany, deleteAssessmentInvitation,
 } from "../lib/employerApi.js";
 import { exportResultsCSV, exportResultsExcel, exportCandidatePdf } from "../lib/assessmentExports.js";
 
@@ -333,9 +333,28 @@ function SentTab({ company }) {
     setTimeout(() => setCopiedId(null), 1500);
   };
 
+  const removeInvitation = (inv) => {
+    if (!confirm(`Delete the invitation sent to ${inv.candidate_name} (${inv.candidate_email})? This removes their invitation, attempt, and any results — it can't be undone.`)) return;
+    deleteAssessmentInvitation(inv.id).then(reload);
+  };
+
+  const header = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+      <span style={{ fontSize: 13, color: "var(--jv-color-muted)" }}>
+        {invitations.length} assessment{invitations.length !== 1 ? "s" : ""} sent
+      </span>
+      <Button size="sm" variant="secondary" icon={RotateCw} onClick={reload}>Refresh</Button>
+    </div>
+  );
+
   if (loading) return <Card>Loading invitations…</Card>;
   if (invitations.length === 0) {
-    return <EmptyState title="No assessments sent yet" description="Select assessments from the library and send them to candidates to see status here." />;
+    return (
+      <>
+        {header}
+        <EmptyState title="No assessments sent yet" description="Select assessments from the library and send them to candidates to see status here." />
+      </>
+    );
   }
 
   const viewing = invitations.find(i => i.id === viewingId);
@@ -349,6 +368,7 @@ function SentTab({ company }) {
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      {header}
       {completedCount > 0 && (
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 4 }}>
           <Button size="sm" variant="secondary" icon={FileText} onClick={() => exportAll("csv")}>Export CSV</Button>
@@ -379,6 +399,7 @@ function SentTab({ company }) {
                   <Button size="sm" variant="secondary" icon={RotateCw} onClick={() => resendAssessmentInvitation(inv.id).then(reload)}>Resend</Button>
                 </>
               )}
+              <Button size="sm" variant="ghost" icon={Trash2} onClick={() => removeInvitation(inv)}>Delete</Button>
             </div>
           </div>
         </Card>

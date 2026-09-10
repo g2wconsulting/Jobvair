@@ -515,6 +515,11 @@ export async function resendAssessmentInvitation(invitationId) {
   await edgeFetch("resend-assessment-invitation", { invitationId });
 }
 
+export async function deleteAssessmentInvitation(invitationId) {
+  const { error } = await supabase.from("assessment_invitations").delete().eq("id", invitationId);
+  if (error) throw error;
+}
+
 // Candidate-facing assessment link — useful as a fallback if the emailed
 // link needs to be shared manually (e.g. it landed in spam).
 export function getAssessmentLink(invitation) {
