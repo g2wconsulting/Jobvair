@@ -1,17 +1,24 @@
-// Overview of every assessment invitation ever sent — separate from the
-// operational "Assessments" page (library/send/manage) so an employer can
-// see at a glance how candidates are progressing without digging into
-// individual tabs. Read-only: actions to resend/delete/copy-link live on
-// the Assessments page itself.
+// Single "Assessments" hub — everything assessment-related (overview stats,
+// sending/tracking invitations, comparison, and the question/assessment
+// builder) lives under one nav item and switches via tabs here, rather than
+// being scattered across separate top-level pages.
 
 import { useEffect, useState } from "react";
 import { Users, CheckCircle2, Clock, TrendingUp } from "lucide-react";
-import { Page, PageHeader, Card, Badge, Button, Select, Input, StatCard, ResponsiveGrid, EmptyState } from "../../components/ui/index.js";
+import { Page, PageHeader, Tabs, Card, Badge, Button, Select, Input, StatCard, ResponsiveGrid, EmptyState } from "../../components/ui/index.js";
 import { listAssessmentInvitations, listCompanyAssessmentScores } from "../lib/employerApi.js";
 import { ASSESSMENT_STATUS_TONE, ASSESSMENT_STATUS_LABEL } from "../constants.js";
-import { ResultDrawer } from "./AssessmentsPage.jsx";
+import { hasFeature } from "../featureFlags.js";
+import AssessmentsPage, { ResultDrawer } from "./AssessmentsPage.jsx";
+import AssessmentBuilderPage from "./AssessmentBuilderPage.jsx";
 
-export default function AssessmentDashboardPage({ company }) {
+const HUB_TABS = [
+  { id: "overview",  label: "Overview" },
+  { id: "manage",    label: "Send & Track" },
+  { id: "builder",   label: "Builder" },
+];
+
+function OverviewTab({ company }) {
   const [invitations, setInvitations] = useState(null);
   const [scoresByInvitation, setScoresByInvitation] = useState({});
   const [search, setSearch] = useState("");
@@ -32,7 +39,7 @@ export default function AssessmentDashboardPage({ company }) {
     });
   }, [company?.id]);
 
-  if (invitations === null) return <Page size="wide"><Card>Loading assessment dashboard…</Card></Page>;
+  if (invitations === null) return <Card>Loading assessment dashboard…</Card>;
 
   const total = invitations.length;
   const completed = invitations.filter(i => i.status === "completed").length;
@@ -52,13 +59,7 @@ export default function AssessmentDashboardPage({ company }) {
   const viewing = invitations.find(i => i.id === viewingId);
 
   return (
-    <Page size="wide">
-      <PageHeader
-        eyebrow="Assessments"
-        title="Assessment Dashboard"
-        description="Every candidate an assessment has been sent to, and how far along they are."
-      />
-
+    <div>
       <div style={{ marginBottom: 24 }}>
         <ResponsiveGrid min="180px" gap="16px">
           <StatCard label="Total Sent" value={total} tone="navy" icon={Users} />
@@ -84,7 +85,7 @@ export default function AssessmentDashboardPage({ company }) {
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState title="No candidates match" description="Try a different search or status filter, or send your first assessment from the Assessments page." />
+        <EmptyState title="No candidates match" description="Try a different search or status filter, or send your first assessment from the Send & Track tab." />
       ) : (
         <Card style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
@@ -128,6 +129,30 @@ export default function AssessmentDashboardPage({ company }) {
       )}
 
       {viewing && <ResultDrawer invitation={viewing} company={company} onClose={() => setViewingId(null)} />}
+    </div>
+  );
+}
+
+export default function AssessmentDashboardPage({ company, user, features, prefillCandidate, onPrefillConsumed }) {
+  const [tab, setTab] = useState(prefillCandidate ? "manage" : "overview");
+  const canBuild = hasFeature(features, "assessment_builder");
+  const tabs = canBuild ? HUB_TABS : HUB_TABS.filter(t => t.id !== "builder");
+
+  return (
+    <Page size="wide">
+      <PageHeader
+        eyebrow="Assessments"
+        title="Assessments"
+        description="Everything assessment-related — send invitations, track candidates, compare results, and author custom questions."
+      />
+      <Tabs tabs={tabs} active={tab} onChange={setTab} />
+      <div style={{ marginTop: 16 }}>
+        {tab === "overview" && <OverviewTab company={company} />}
+        {tab === "manage" && (
+          <AssessmentsPage company={company} user={user} prefillCandidate={prefillCandidate} onPrefillConsumed={onPrefillConsumed} />
+        )}
+        {tab === "builder" && canBuild && <AssessmentBuilderPage company={company} user={user} />}
+      </div>
     </Page>
   );
 }

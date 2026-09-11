@@ -7,8 +7,6 @@ import EmployerDashboardPage from "./employer/pages/DashboardPage.jsx";
 import JobsPage from "./employer/pages/JobsPage.jsx";
 import CandidatesPage from "./employer/pages/CandidatesPage.jsx";
 import TalentSearchPage from "./employer/pages/TalentSearchPage.jsx";
-import AssessmentsPage from "./employer/pages/AssessmentsPage.jsx";
-import AssessmentBuilderPage from "./employer/pages/AssessmentBuilderPage.jsx";
 import AssessmentDashboardPage from "./employer/pages/AssessmentDashboardPage.jsx";
 import HiringPage from "./employer/pages/HiringPage.jsx";
 import IntelligencePage from "./employer/pages/IntelligencePage.jsx";
@@ -195,12 +193,8 @@ export default function EmployerApp() {
           {page === "candidates"   && <CandidatesPage company={company} user={user} features={features} onSendAssessment={sendAssessmentTo} />}
           {page === "talent-search" && hasFeature(features, "talent_search") && <TalentSearchPage />}
           {page === "assessments"  && hasFeature(features, "assessments") && (
-            <AssessmentsPage company={company} user={user} prefillCandidate={assessmentPrefill} onPrefillConsumed={() => setAssessmentPrefill(null)} />
+            <AssessmentDashboardPage company={company} user={user} features={features} prefillCandidate={assessmentPrefill} onPrefillConsumed={() => setAssessmentPrefill(null)} />
           )}
-          {page === "assessment-dashboard" && hasFeature(features, "assessments") && (
-            <AssessmentDashboardPage company={company} />
-          )}
-          {page === "assessment-builder" && hasFeature(features, "assessment_builder") && <AssessmentBuilderPage company={company} user={user} />}
           {page === "hiring"       && <HiringPage company={company} user={user} />}
           {page === "intelligence" && hasFeature(features, "market_intelligence") && <IntelligencePage company={company} user={user} />}
           {page === "company"      && <CompanyPage company={company} membership={activeMembership} onCompanyUpdated={loadMemberships} />}

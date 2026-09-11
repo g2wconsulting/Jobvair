@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   LayoutDashboard, Briefcase, Users, GitBranch, LineChart, Building2,
-  CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck, Wrench, Gauge, UserSearch,
+  CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck, UserSearch,
 } from "lucide-react";
 import { EMPLOYER_NAV } from "../constants.js";
 import { hasFeature } from "../featureFlags.js";
@@ -13,8 +13,6 @@ const NAV_ICONS = {
   candidates: Users,
   "talent-search": UserSearch,
   assessments: ClipboardCheck,
-  "assessment-dashboard": Gauge,
-  "assessment-builder": Wrench,
   hiring: GitBranch,
   intelligence: LineChart,
   company: Building2,

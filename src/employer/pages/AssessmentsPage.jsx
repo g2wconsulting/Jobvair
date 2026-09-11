@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Send, RotateCw, Link2, X, Download, FileSpreadsheet, FileText, Trash2 } from "lucide-react";
 import {
-  Page, PageHeader, Tabs, Card, Button, Badge, Input, Select, EmptyState, ProgressBar,
+  Tabs, Card, Button, Badge, Input, Select, EmptyState, ProgressBar,
 } from "../../components/ui/index.js";
 import {
   listAssessmentInvitations, createAssessmentInvitations, resendAssessmentInvitation, listJobs,
@@ -517,20 +517,18 @@ export default function AssessmentsPage({ company, user, prefillCandidate, onPre
 
   if (sendingOpen) {
     return (
-      <Page size="wide">
-        <PageHeader eyebrow="Assessments" title="Send Assessments" description="Review the selected assessments and add candidates below." />
+      <div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--jv-color-heading)" }}>Send Assessments</div>
+          <div style={{ fontSize: 13, color: "var(--jv-color-muted)" }}>Review the selected assessments and add candidates below.</div>
+        </div>
         <SendForm selected={selected} library={library} company={company} user={user} onCancel={() => setSendingOpen(false)} onSent={handleSent} initialCandidate={pendingCandidate} />
-      </Page>
+      </div>
     );
   }
 
   return (
-    <Page size="wide">
-      <PageHeader
-        eyebrow="Assessments"
-        title="Candidate Assessments"
-        description="Send skills assessments to candidates and track completion and results."
-      />
+    <div>
       <UsageGauge company={company} />
       {pendingCandidate && tab === "library" && (
         <Card style={{ marginBottom: 16, borderColor: "var(--jv-color-primary)" }}>
@@ -556,6 +554,6 @@ export default function AssessmentsPage({ company, user, prefillCandidate, onPre
           </div>
         </div>
       )}
-    </Page>
+    </div>
   );
 }
