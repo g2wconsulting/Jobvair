@@ -9,6 +9,7 @@ import {
   listCompanyCustomAssessments, listApplicantsForCompany, deleteAssessmentInvitation,
 } from "../lib/employerApi.js";
 import { exportResultsCSV, exportResultsExcel, exportCandidatePdf } from "../lib/assessmentExports.js";
+import { ASSESSMENT_STATUS_TONE, ASSESSMENT_STATUS_LABEL } from "../constants.js";
 
 const ASSESSMENT_LIBRARY = [
   { id:"typing",          name:"Typing",                  icon:"⌨️", category:"Core Skills",      minutes:10, questions:1,  description:"Measures words per minute, accuracy, and consistency." },
@@ -35,8 +36,8 @@ const TABS = [
   { id: "comparison", label: "Comparison" },
 ];
 
-const STATUS_TONE = { sent: "neutral", in_progress: "warning", completed: "success", expired: "danger" };
-const STATUS_LABEL = { sent: "Invited", in_progress: "In Progress", completed: "Completed", expired: "Expired" };
+const STATUS_TONE = ASSESSMENT_STATUS_TONE;
+const STATUS_LABEL = ASSESSMENT_STATUS_LABEL;
 
 function LibraryTab({ selected, onToggle, onSelectBundle, bundles, library }) {
   const [search, setSearch] = useState("");
@@ -246,7 +247,7 @@ function SendForm({ selected, library, company, user, onCancel, onSent, initialC
   );
 }
 
-function ResultDrawer({ invitation, company, onClose }) {
+export function ResultDrawer({ invitation, company, onClose }) {
   const [result, setResult] = useState(undefined); // undefined = loading, null = not started
 
   useEffect(() => { getAssessmentResult(invitation.id).then(setResult); }, [invitation.id]);

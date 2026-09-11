@@ -8,6 +8,7 @@ import JobsPage from "./employer/pages/JobsPage.jsx";
 import CandidatesPage from "./employer/pages/CandidatesPage.jsx";
 import AssessmentsPage from "./employer/pages/AssessmentsPage.jsx";
 import AssessmentBuilderPage from "./employer/pages/AssessmentBuilderPage.jsx";
+import AssessmentDashboardPage from "./employer/pages/AssessmentDashboardPage.jsx";
 import HiringPage from "./employer/pages/HiringPage.jsx";
 import IntelligencePage from "./employer/pages/IntelligencePage.jsx";
 import CompanyPage from "./employer/pages/CompanyPage.jsx";
@@ -192,6 +193,9 @@ export default function EmployerApp() {
           {page === "candidates"   && <CandidatesPage company={company} user={user} features={features} onSendAssessment={sendAssessmentTo} />}
           {page === "assessments"  && hasFeature(features, "assessments") && (
             <AssessmentsPage company={company} user={user} prefillCandidate={assessmentPrefill} onPrefillConsumed={() => setAssessmentPrefill(null)} />
+          )}
+          {page === "assessment-dashboard" && hasFeature(features, "assessments") && (
+            <AssessmentDashboardPage company={company} />
           )}
           {page === "assessment-builder" && hasFeature(features, "assessment_builder") && <AssessmentBuilderPage company={company} user={user} />}
           {page === "hiring"       && <HiringPage company={company} user={user} />}

@@ -3,6 +3,7 @@ export const EMPLOYER_NAV = [
   { id: "jobs",         label: "Jobs" },
   { id: "candidates",   label: "Candidates" },
   { id: "assessments",  label: "Assessments", featureKey: "assessments" },
+  { id: "assessment-dashboard", label: "Assessment Dashboard", featureKey: "assessments" },
   { id: "assessment-builder", label: "Assessment Builder", featureKey: "assessment_builder" },
   { id: "hiring",       label: "Hiring" },
   { id: "intelligence", label: "Intelligence", featureKey: "market_intelligence" },
@@ -12,6 +13,9 @@ export const EMPLOYER_NAV = [
 ];
 
 export const JOB_STATUSES = ["draft", "published", "paused", "closed", "archived"];
+
+export const ASSESSMENT_STATUS_TONE = { sent: "neutral", in_progress: "warning", completed: "success", expired: "danger" };
+export const ASSESSMENT_STATUS_LABEL = { sent: "Invited", in_progress: "In Progress", completed: "Completed", expired: "Expired" };
 
 export const PIPELINE_STAGES = [
   { id: "applied",         label: "Applied" },
