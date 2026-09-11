@@ -8,6 +8,7 @@ import {
   listJobs, createJob, updateJob, setJobStatus, duplicateJob, deleteJob,
 } from "../lib/employerApi.js";
 import { EMPTY_JOB } from "../constants.js";
+import JobCustomQuestionsPanel from "../components/JobCustomQuestionsPanel.jsx";
 
 const TABS = [
   { id: "published", label: "Active Jobs" },
@@ -56,7 +57,7 @@ function aiDraftFromPrompt(prompt) {
   };
 }
 
-function JobEditor({ job, onSave, onCancel }) {
+function JobEditor({ job, onSave, onCancel, company, user, onJobUpdated }) {
   const [form, setForm] = useState({ ...EMPTY_JOB, ...job });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const [skillInput, setSkillInput] = useState("");
@@ -81,6 +82,7 @@ function JobEditor({ job, onSave, onCancel }) {
   };
 
   return (
+    <div style={{ display: "grid", gap: 16 }}>
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--jv-color-heading)" }}>{job?.id ? "Edit Job" : "New Job"}</h2>
@@ -182,6 +184,8 @@ function JobEditor({ job, onSave, onCancel }) {
         <Button disabled={saving || !form.title} onClick={() => save("published")}>{saving ? "Saving…" : "Publish Job"}</Button>
       </div>
     </Card>
+    {job?.id && <JobCustomQuestionsPanel job={job} company={company} user={user} onJobUpdated={onJobUpdated} />}
+    </div>
   );
 }
 
@@ -281,7 +285,7 @@ export default function JobsPage({ company, user }) {
     return (
       <Page size="wide">
         <PageHeader eyebrow="Jobs" title={editing === "new" ? "Create a job" : `Edit: ${editing.title}`} />
-        <JobEditor job={editing === "new" ? null : editing} onSave={handleSave} onCancel={() => setEditing(null)} />
+        <JobEditor job={editing === "new" ? null : editing} onSave={handleSave} onCancel={() => setEditing(null)} company={company} user={user} onJobUpdated={reload} />
       </Page>
     );
   }

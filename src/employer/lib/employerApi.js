@@ -134,6 +134,81 @@ export async function setJobStatus(jobId, status) {
   return updateJob(jobId, patch);
 }
 
+// ── Job-attached custom questions ──────────────────────────────────────
+// A job's custom questions live in an ordinary company-owned assessment
+// (same tables the Assessment Builder writes to) — this just get-or-creates
+// that assessment/section the first time a manager adds a question to a
+// job, and remembers it via jobs.linked_assessment_id. Reuses the full
+// existing scoring/candidate-delivery pipeline instead of a parallel one.
+async function getOrCreateCompanyQuestionBank(companyId) {
+  const { data: existing } = await supabase.from("question_banks").select("id").eq("company_id", companyId).limit(1).maybeSingle();
+  if (existing) return existing.id;
+  const { data: created, error } = await supabase.from("question_banks").insert({ company_id: companyId, name: "Custom Questions" }).select().single();
+  if (error) throw error;
+  return created.id;
+}
+
+export async function getOrCreateJobAssessment(job, companyId, userId) {
+  if (job.linked_assessment_id) {
+    const { data: section } = await supabase.from("assessment_sections").select("id").eq("assessment_id", job.linked_assessment_id).limit(1).maybeSingle();
+    if (section) return { assessmentId: job.linked_assessment_id, sectionId: section.id };
+  }
+
+  const { data: assessment, error: assessmentError } = await supabase
+    .from("assessments")
+    .insert({
+      company_id: companyId,
+      created_by: userId,
+      name: `${job.title} — Job Questions`,
+      category: "Job-Specific",
+      slug: `custom-${companyId.slice(0, 8)}-job-${job.id.slice(0, 8)}`,
+    })
+    .select()
+    .single();
+  if (assessmentError) throw assessmentError;
+
+  const { data: section, error: sectionError } = await supabase
+    .from("assessment_sections")
+    .insert({ assessment_id: assessment.id, name: "Job-Specific Questions", display_order: 0, weight: 1 })
+    .select()
+    .single();
+  if (sectionError) throw sectionError;
+
+  await supabase.from("jobs").update({ linked_assessment_id: assessment.id }).eq("id", job.id);
+
+  return { assessmentId: assessment.id, sectionId: section.id };
+}
+
+export async function listSectionQuestions(sectionId) {
+  const { data, error } = await supabase
+    .from("assessment_questions")
+    .select("display_order, questions(id, type, prompt, points, correct_answer, rubric, question_options(id, label, is_correct, display_order))")
+    .eq("section_id", sectionId)
+    .order("display_order");
+  if (error) throw error;
+  return (data || []).map(row => ({ ...row.questions, question_options: (row.questions.question_options || []).sort((a, b) => a.display_order - b.display_order) }));
+}
+
+export async function addSectionQuestion(sectionId, companyId, payload, existingCount) {
+  const questionBankId = await getOrCreateCompanyQuestionBank(companyId);
+  const { data: q, error } = await supabase
+    .from("questions")
+    .insert({ question_bank_id: questionBankId, type: payload.type, prompt: payload.prompt, points: payload.points, correct_answer: payload.correct_answer, rubric: payload.rubric })
+    .select()
+    .single();
+  if (error) throw error;
+  if (payload.options?.length) {
+    await supabase.from("question_options").insert(payload.options.map((o, i) => ({ question_id: q.id, label: o.label, value: o.label, is_correct: o.is_correct, display_order: i })));
+  }
+  await supabase.from("assessment_questions").insert({ section_id: sectionId, question_id: q.id, display_order: existingCount });
+  return q;
+}
+
+export async function deleteSectionQuestion(questionId) {
+  const { error } = await supabase.from("questions").delete().eq("id", questionId);
+  if (error) throw error;
+}
+
 export async function duplicateJob(job, userId) {
   // eslint-disable-next-line no-unused-vars
   const { id, created_at, updated_at, published_at, closed_at, ...rest } = job;
