@@ -2,9 +2,14 @@ export const EMPLOYER_NAV = [
   { id: "dashboard",    label: "Dashboard" },
   { id: "jobs",         label: "Jobs" },
   { id: "candidates",   label: "Candidates" },
-  { id: "assessments",  label: "Assessments", featureKey: "assessments" },
-  { id: "assessment-dashboard", label: "Assessment Dashboard", featureKey: "assessments" },
-  { id: "assessment-builder", label: "Assessment Builder", featureKey: "assessment_builder" },
+  { id: "talent-search", label: "Talent Search", featureKey: "talent_search" },
+  {
+    id: "assessments", label: "Assessments", featureKey: "assessments",
+    children: [
+      { id: "assessment-dashboard", label: "Assessment Dashboard", featureKey: "assessments" },
+      { id: "assessment-builder", label: "Assessment Builder", featureKey: "assessment_builder" },
+    ],
+  },
   { id: "hiring",       label: "Hiring" },
   { id: "intelligence", label: "Intelligence", featureKey: "market_intelligence" },
   { id: "company",      label: "Company" },

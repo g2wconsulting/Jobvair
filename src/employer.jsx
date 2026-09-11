@@ -6,6 +6,7 @@ import EmployerAuthScreen from "./employer/pages/AuthScreen.jsx";
 import EmployerDashboardPage from "./employer/pages/DashboardPage.jsx";
 import JobsPage from "./employer/pages/JobsPage.jsx";
 import CandidatesPage from "./employer/pages/CandidatesPage.jsx";
+import TalentSearchPage from "./employer/pages/TalentSearchPage.jsx";
 import AssessmentsPage from "./employer/pages/AssessmentsPage.jsx";
 import AssessmentBuilderPage from "./employer/pages/AssessmentBuilderPage.jsx";
 import AssessmentDashboardPage from "./employer/pages/AssessmentDashboardPage.jsx";
@@ -151,7 +152,8 @@ export default function EmployerApp() {
   const user = authUser;
 
   const navigate = (nextPage) => {
-    const navItem = EMPLOYER_NAV.find(n => n.id === nextPage);
+    const flatNav = EMPLOYER_NAV.flatMap(n => [n, ...(n.children || [])]);
+    const navItem = flatNav.find(n => n.id === nextPage);
     if (features && navItem?.featureKey && !hasFeature(features, navItem.featureKey)) return;
     setPage(nextPage);
   };
@@ -191,6 +193,7 @@ export default function EmployerApp() {
           {page === "dashboard"    && <EmployerDashboardPage company={company} onNav={navigate} />}
           {page === "jobs"         && <JobsPage company={company} user={user} />}
           {page === "candidates"   && <CandidatesPage company={company} user={user} features={features} onSendAssessment={sendAssessmentTo} />}
+          {page === "talent-search" && hasFeature(features, "talent_search") && <TalentSearchPage />}
           {page === "assessments"  && hasFeature(features, "assessments") && (
             <AssessmentsPage company={company} user={user} prefillCandidate={assessmentPrefill} onPrefillConsumed={() => setAssessmentPrefill(null)} />
           )}

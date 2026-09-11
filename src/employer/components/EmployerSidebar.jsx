@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   LayoutDashboard, Briefcase, Users, GitBranch, LineChart, Building2,
-  CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck, Wrench, Gauge,
+  CreditCard, Settings, ChevronDown, ChevronLeft, ChevronRight, LogOut, ClipboardCheck, Wrench, Gauge, UserSearch,
 } from "lucide-react";
 import { EMPLOYER_NAV } from "../constants.js";
 import { hasFeature } from "../featureFlags.js";
@@ -11,6 +11,7 @@ const NAV_ICONS = {
   dashboard: LayoutDashboard,
   jobs: Briefcase,
   candidates: Users,
+  "talent-search": UserSearch,
   assessments: ClipboardCheck,
   "assessment-dashboard": Gauge,
   "assessment-builder": Wrench,
@@ -42,17 +43,34 @@ export default function EmployerSidebar({ active, onNav, company, membership, co
         {visibleNav.map(item => {
           const Icon = NAV_ICONS[item.id] || LayoutDashboard;
           const isActive = active === item.id;
+          const visibleChildren = (item.children || []).filter(child => !child.featureKey || hasFeature(features, child.featureKey));
           return (
-            <button
-              key={item.id}
-              onClick={() => onNav(item.id)}
-              title={collapsed ? item.label : undefined}
-              className={`jv-nav-item${isActive ? " jv-nav-item--active" : ""}`}
-              style={{ justifyContent: collapsed ? "center" : "flex-start" }}
-            >
-              <span className="jv-nav-item__icon"><Icon size={17} /></span>
-              {!collapsed && <span className="jv-nav-item__label">{item.label}</span>}
-            </button>
+            <div key={item.id}>
+              <button
+                onClick={() => onNav(item.id)}
+                title={collapsed ? item.label : undefined}
+                className={`jv-nav-item${isActive ? " jv-nav-item--active" : ""}`}
+                style={{ justifyContent: collapsed ? "center" : "flex-start" }}
+              >
+                <span className="jv-nav-item__icon"><Icon size={17} /></span>
+                {!collapsed && <span className="jv-nav-item__label">{item.label}</span>}
+              </button>
+              {!collapsed && visibleChildren.map(child => {
+                const ChildIcon = NAV_ICONS[child.id] || Icon;
+                const isChildActive = active === child.id;
+                return (
+                  <button
+                    key={child.id}
+                    onClick={() => onNav(child.id)}
+                    className={`jv-nav-item${isChildActive ? " jv-nav-item--active" : ""}`}
+                    style={{ justifyContent: "flex-start", paddingLeft: 40, fontSize: 13 }}
+                  >
+                    <span className="jv-nav-item__icon"><ChildIcon size={14} /></span>
+                    <span className="jv-nav-item__label">{child.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </nav>

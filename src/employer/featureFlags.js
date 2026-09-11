@@ -15,6 +15,7 @@ export const GATABLE_FEATURES = [
   { key: "candidate_messaging", label: "Candidate Messaging", description: "Message applicants directly from their pipeline card." },
   { key: "interview_scheduling", label: "Interview Scheduling", description: "Invite candidates to interviews with a date, time, and location or link." },
   { key: "public_job_board", label: "Public Job Listings", description: "Publish this company's jobs to Jobvair's public, search-indexed job board." },
+  { key: "talent_search", label: "Talent Search", description: "AI-assisted candidate sourcing across Jobvair and (as they're configured) external providers. Early access — mock results only until real providers are connected." },
 ];
 
 const DEFAULT_ON = new Set(["assessments", "assessment_builder", "market_intelligence", "public_job_board"]);
