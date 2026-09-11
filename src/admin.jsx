@@ -110,16 +110,19 @@ function Dashboard() {
 
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total Users" value={stats?.total_users} sub={`+${stats?.new_users_7d} this week`} icon="👥" color={A.teal} />
+        <StatCard label="Total Candidates" value={stats?.total_candidate_users} sub={`+${stats?.new_candidate_users_7d} this week`} icon="👥" color={A.teal} />
+        <StatCard label="Employer Accounts" value={stats?.total_employer_users} sub={`${stats?.total_employer_companies} companies`} icon="🏢" color={A.blue} />
         <StatCard label="Paid Subscribers" value={stats?.paid_subscribers} sub={`$${mrr}/mo MRR`} icon="💳" color={A.green} />
         <StatCard label="ID Verified" value={stats?.verified_users} icon="🛡" color={A.blue} />
-        <StatCard label="AI Analyses" value={stats?.ai_analyses_run} icon="🤖" color={A.purple} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+        <StatCard label="AI Analyses" value={stats?.ai_analyses_run} icon="🤖" color={A.purple} />
         <StatCard label="Resumes Uploaded" value={stats?.resumes_parsed} icon="📎" color={A.gold} />
         <StatCard label="Resumes Built" value={stats?.total_resumes} icon="📄" color={A.teal} />
         <StatCard label="Skills Entered" value={stats?.total_skills_entered} icon="⚡" color={A.blue} />
-        <StatCard label="New Users (30d)" value={stats?.new_users_30d} icon="🚀" color={A.green} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+        <StatCard label="New Candidates (30d)" value={stats?.new_candidate_users_30d} icon="🚀" color={A.green} />
       </div>
 
       {/* Plan breakdown */}
@@ -127,7 +130,7 @@ function Dashboard() {
         <Card>
           <div style={{ fontSize: 14, fontWeight: 700, color: A.text, marginBottom: 16 }}>Plan Breakdown</div>
           {[
-            { label: "Free", count: (stats?.total_users || 0) - (stats?.paid_subscribers || 0), color: A.textMuted },
+            { label: "Free", count: (stats?.total_candidate_users || 0) - (stats?.paid_subscribers || 0), color: A.textMuted },
             { label: "Pro ($6/mo)", count: stats?.premium_count || 0, color: A.teal },
             { label: "Career+ ($12/mo)", count: stats?.premium_plus_count || 0, color: A.purple },
           ].map(p => (
@@ -146,7 +149,7 @@ function Dashboard() {
           <div style={{ fontSize: 14, fontWeight: 700, color: A.text, marginBottom: 16 }}>Verification Status</div>
           {[
             { label: "Verified", count: stats?.verified_users || 0, color: A.green },
-            { label: "Not Started", count: (stats?.total_users || 0) - (stats?.verified_users || 0), color: A.textMuted },
+            { label: "Not Started", count: (stats?.total_candidate_users || 0) - (stats?.verified_users || 0), color: A.textMuted },
           ].map(v => (
             <div key={v.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${A.border}` }}>
               <span style={{ fontSize: 14, color: A.textLight }}>{v.label}</span>
