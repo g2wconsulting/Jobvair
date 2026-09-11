@@ -77,6 +77,10 @@ Respond with ONLY a single JSON object matching this exact shape, and nothing el
       max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
+      // Pins inference to US infrastructure — required for the RFP's US
+      // data-residency commitment. Without this, Anthropic may process the
+      // request on non-US infrastructure (data at rest stays US either way).
+      inference_geo: "us",
     }),
   });
 

@@ -74,6 +74,7 @@ async function callAnthropicWithPdf(base64Pdf) {
           { type: "text", text: "Extract structured resume data from this document, following the required JSON shape exactly." },
         ],
       }],
+      inference_geo: "us",
     }),
   });
   if (!res.ok) {
@@ -101,6 +102,7 @@ async function callAnthropicWithText(resumeText) {
         role: "user",
         content: `Resume text:\n\n${resumeText}\n\nExtract structured resume data from this, following the required JSON shape exactly.`,
       }],
+      inference_geo: "us",
     }),
   });
   if (!res.ok) {
