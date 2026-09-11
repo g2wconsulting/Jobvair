@@ -10,153 +10,20 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
-
-// ── Design tokens ─────────────────────────────────────────────────────────
-const A = {
-  bg:         "#F0F4F8",
-  bgCard:     "#FFFFFF",
-  bgHover:    "#F8FAFC",
-  border:     "#E2E8F0",
-  borderHover:"#CBD5E1",
-  navy:       "#1E3A5F",
-  teal:       "#0D9488",
-  tealDim:    "#0D948822",
-  blue:       "#3B82F6",
-  purple:     "#7C3AED",
-  gold:       "#D97706",
-  red:        "#EF4444",
-  green:      "#059669",
-  text:       "#0F172A",
-  textMuted:  "#64748B",
-  textLight:  "#94A3B8",
-  white:      "#FFFFFF",
-};
-
-const font = "'DM Mono', 'Fira Code', 'Courier New', monospace";
-const sans = "'DM Sans', 'Inter', sans-serif";
-
-// ── Tiny components ───────────────────────────────────────────────────────
-const Card = ({ children, style = {}, onClick }) => (
-  <div onClick={onClick} style={{
-    background: A.bgCard, border: `1px solid ${A.border}`, borderRadius: 12,
-    padding: 24, transition: "border-color 0.15s",
-    cursor: onClick ? "pointer" : "default",
-    ...style,
-  }}
-    onMouseEnter={e => onClick && (e.currentTarget.style.borderColor = A.borderHover)}
-    onMouseLeave={e => onClick && (e.currentTarget.style.borderColor = A.border)}
-  >{children}</div>
-);
-
-const Badge = ({ children, color = "blue" }) => {
-  const colors = { blue: A.blue, teal: A.teal, green: A.green, red: A.red, gold: A.gold, purple: A.purple, gray: A.textMuted };
-  const c = colors[color] || A.blue;
-  return (
-    <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 8px", borderRadius:99,
-      background: `${c}22`, color: c, fontSize: 11, fontWeight: 700, letterSpacing:"0.05em",
-      fontFamily: font, border: `1px solid ${c}44` }}>
-      {children}
-    </span>
-  );
-};
-
-const Btn = ({ children, onClick, variant = "primary", small, disabled, full, icon }) => {
-  const base = {
-    display: "inline-flex", alignItems: "center", gap: 6, padding: small ? "6px 14px" : "10px 20px",
-    borderRadius: 8, fontSize: small ? 12 : 14, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.5 : 1, border: "none", fontFamily: sans, transition: "all 0.15s",
-    width: full ? "100%" : undefined, justifyContent: full ? "center" : undefined,
-  };
-  const variants = {
-    primary:   { background: A.teal, color: "#000" },
-    secondary: { background: "transparent", color: A.text, border: `1px solid ${A.border}` },
-    danger:    { background: `${A.red}22`, color: A.red, border: `1px solid ${A.red}44` },
-    ghost:     { background: "transparent", color: A.textMuted },
-  };
-  return (
-    <button onClick={disabled ? undefined : onClick} style={{ ...base, ...variants[variant] }}>
-      {icon && <span>{icon}</span>}{children}
-    </button>
-  );
-};
-
-const Input = ({ label, value, onChange, placeholder, type = "text", hint }) => (
-  <div>
-    {label && <div style={{ fontSize: 12, color: A.textMuted, marginBottom: 6, fontFamily: font, letterSpacing:"0.05em", textTransform:"uppercase" }}>{label}</div>}
-    <input
-      type={type}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      style={{
-        width: "100%", padding: "10px 14px", background: A.bg, border: `1px solid ${A.border}`,
-        borderRadius: 8, color: A.text, fontSize: 14, fontFamily: sans, outline: "none",
-        boxSizing: "border-box",
-      }}
-    />
-    {hint && <div style={{ fontSize: 11, color: A.textMuted, marginTop: 4 }}>{hint}</div>}
-  </div>
-);
-
-const Select = ({ label, value, onChange, options }) => (
-  <div>
-    {label && <div style={{ fontSize: 12, color: A.textMuted, marginBottom: 6, fontFamily: font, letterSpacing:"0.05em", textTransform:"uppercase" }}>{label}</div>}
-    <select value={value} onChange={e => onChange(e.target.value)} style={{
-      width: "100%", padding: "10px 14px", background: A.bg, border: `1px solid ${A.border}`,
-      borderRadius: 8, color: A.text, fontSize: 14, fontFamily: sans, outline: "none",
-    }}>
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  </div>
-);
-
-const StatCard = ({ label, value, sub, color = A.teal, icon }) => (
-  <Card>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-      <div>
-        <div style={{ fontSize: 12, color: A.textMuted, fontFamily: font, textTransform: "uppercase", letterSpacing:"0.08em", marginBottom: 8 }}>{label}</div>
-        <div style={{ fontSize: 32, fontWeight: 800, color, fontFamily: font }}>{value ?? "—"}</div>
-        {sub && <div style={{ fontSize: 12, color: A.textMuted, marginTop: 4 }}>{sub}</div>}
-      </div>
-      {icon && <div style={{ fontSize: 28, opacity: 0.6 }}>{icon}</div>}
-    </div>
-  </Card>
-);
+import { A, font, sans } from "./admin/theme.js";
+import { Card, Badge, Btn, Input, Select, StatCard } from "./admin/ui.jsx";
+import AssessmentsAdminPage from "./admin/AssessmentsAdminPage.jsx";
+import EmployersPage from "./admin/EmployersPage.jsx";
 
 // ── Admin Login ───────────────────────────────────────────────────────────
-function AdminLogin({ onLogin }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const submit = async () => {
-    if (!email || !password) { setError("Email and password required."); return; }
-    setLoading(true); setError("");
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) { setError(authError.message); setLoading(false); return; }
-
-    // Check if user is in admin_users table
-    const { data: adminRow } = await supabase
-      .from("admin_users")
-      .select("*")
-      .eq("id", data.user.id)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (!adminRow) {
-      await supabase.auth.signOut();
-      setError("Access denied. This account does not have admin privileges.");
-      setLoading(false);
-      return;
-    }
-    onLogin(data.user, adminRow);
-  };
-
+// Multi-step: password -> admin_users check -> TOTP MFA (enroll on first
+// login, verify on every login after). Every attempt — including failed
+// password checks and failed MFA codes — is recorded via
+// record_admin_login_attempt() for the lockout check and the audit log.
+function AdminShell({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: A.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans }}>
       <div style={{ width: 400 }}>
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: A.teal, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -168,23 +35,176 @@ function AdminLogin({ onLogin }) {
           </div>
           <div style={{ fontSize: 12, color: A.textMuted, fontFamily: font, letterSpacing: "0.15em", textTransform: "uppercase" }}>Admin Console</div>
         </div>
-
-        <Card>
-          <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Sign in</div>
-          <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 24 }}>Admin access only</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Input label="Email" value={email} onChange={setEmail} placeholder="admin@jobvair.com" type="email" />
-            <Input label="Password" value={password} onChange={setPassword} placeholder="••••••••" type="password" />
-            {error && <div style={{ padding: "10px 14px", background: `${A.red}22`, border: `1px solid ${A.red}44`, borderRadius: 8, fontSize: 13, color: A.red }}>{error}</div>}
-            <Btn full onClick={submit} disabled={loading}>{loading ? "Signing in…" : "Sign in to Admin"}</Btn>
-          </div>
-        </Card>
-
+        {children}
         <div style={{ textAlign: "center", marginTop: 24, fontSize: 12, color: A.textMuted }}>
           Jobvair Platform · Admin Console · Restricted Access
         </div>
       </div>
     </div>
+  );
+}
+
+function AdminLogin({ onLogin }) {
+  const [step, setStep] = useState("credentials"); // credentials | mfa-enroll | mfa-verify
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Carried between steps for the same login attempt.
+  const [pending, setPending] = useState(null); // { user, adminRow }
+  const [mfa, setMfa] = useState(null); // { factorId, challengeId, qrCode, secret }
+
+  const record = (success, failureReason) =>
+    supabase.rpc("record_admin_login_attempt", {
+      p_email: email.trim().toLowerCase(),
+      p_success: success,
+      p_failure_reason: failureReason || null,
+      p_user_agent: navigator.userAgent,
+      p_user_id: pending?.user?.id || null,
+    });
+
+  const submitCredentials = async () => {
+    if (!email || !password) { setError("Email and password required."); return; }
+    setLoading(true); setError("");
+
+    const { data: lockRows } = await supabase.rpc("is_admin_login_locked", { p_email: email.trim().toLowerCase() });
+    const lock = lockRows?.[0];
+    if (lock?.locked) {
+      setError(`Too many failed attempts. Try again after ${new Date(lock.locked_until).toLocaleTimeString()}.`);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) {
+      await record(false, "invalid_credentials");
+      setError("Invalid email or password.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: adminRow } = await supabase
+      .from("admin_users")
+      .select("*")
+      .eq("id", data.user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!adminRow) {
+      setPending({ user: data.user, adminRow: null });
+      await record(false, "not_admin");
+      await supabase.auth.signOut();
+      setError("Access denied. This account does not have admin privileges.");
+      setLoading(false);
+      return;
+    }
+
+    setPending({ user: data.user, adminRow });
+
+    const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+    if (factorsError) { setError(factorsError.message); setLoading(false); return; }
+    const totp = (factorsData?.totp || []).find(f => f.status === "verified");
+
+    if (!totp) {
+      const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      if (enrollError) { setError(enrollError.message); setLoading(false); return; }
+      setMfa({ factorId: enrollData.id, qrCode: enrollData.totp.qr_code, secret: enrollData.totp.secret });
+      setStep("mfa-enroll");
+      setLoading(false);
+      return;
+    }
+
+    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totp.id });
+    if (challengeError) { setError(challengeError.message); setLoading(false); return; }
+    setMfa({ factorId: totp.id, challengeId: challengeData.id });
+    setStep("mfa-verify");
+    setLoading(false);
+  };
+
+  const submitMfaEnroll = async () => {
+    if (mfaCode.length !== 6) { setError("Enter the 6-digit code from your authenticator app."); return; }
+    setLoading(true); setError("");
+    const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfa.factorId, code: mfaCode });
+    if (verifyError) {
+      await record(false, "mfa_failed");
+      setError("That code didn't verify. Check your authenticator app and try again.");
+      setLoading(false);
+      return;
+    }
+    await record(true);
+    onLogin(pending.user, pending.adminRow);
+  };
+
+  const submitMfaVerify = async () => {
+    if (mfaCode.length !== 6) { setError("Enter the 6-digit code from your authenticator app."); return; }
+    setLoading(true); setError("");
+    const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: mfa.factorId, challengeId: mfa.challengeId, code: mfaCode });
+    if (verifyError) {
+      await record(false, "mfa_failed");
+      setError("Invalid code. Try again.");
+      setLoading(false);
+      return;
+    }
+    await record(true);
+    onLogin(pending.user, pending.adminRow);
+  };
+
+  if (step === "mfa-enroll") {
+    return (
+      <AdminShell>
+        <Card>
+          <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Set up two-factor authentication</div>
+          <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 20 }}>Required for admin access. Scan this with Google Authenticator, Authy, or any TOTP app.</div>
+          {mfa?.qrCode && (
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, background: "#fff", padding: 16, borderRadius: 8 }}
+              dangerouslySetInnerHTML={{ __html: mfa.qrCode }} />
+          )}
+          {mfa?.secret && (
+            <div style={{ fontSize: 11, color: A.textMuted, textAlign: "center", marginBottom: 20, wordBreak: "break-all", fontFamily: font }}>
+              Can't scan? Enter manually: {mfa.secret}
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <Input label="6-digit code" value={mfaCode} onChange={setMfaCode} placeholder="000000" />
+            {error && <div style={{ padding: "10px 14px", background: `${A.red}22`, border: `1px solid ${A.red}44`, borderRadius: 8, fontSize: 13, color: A.red }}>{error}</div>}
+            <Btn full onClick={submitMfaEnroll} disabled={loading}>{loading ? "Verifying…" : "Verify & Finish Setup"}</Btn>
+          </div>
+        </Card>
+      </AdminShell>
+    );
+  }
+
+  if (step === "mfa-verify") {
+    return (
+      <AdminShell>
+        <Card>
+          <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Two-factor authentication</div>
+          <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 24 }}>Enter the 6-digit code from your authenticator app.</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <Input label="6-digit code" value={mfaCode} onChange={setMfaCode} placeholder="000000" />
+            {error && <div style={{ padding: "10px 14px", background: `${A.red}22`, border: `1px solid ${A.red}44`, borderRadius: 8, fontSize: 13, color: A.red }}>{error}</div>}
+            <Btn full onClick={submitMfaVerify} disabled={loading}>{loading ? "Verifying…" : "Verify"}</Btn>
+          </div>
+        </Card>
+      </AdminShell>
+    );
+  }
+
+  return (
+    <AdminShell>
+      <Card>
+        <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Sign in</div>
+        <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 24 }}>Admin access only</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Input label="Email" value={email} onChange={setEmail} placeholder="admin@jobvair.com" type="email" />
+          <Input label="Password" value={password} onChange={setPassword} placeholder="••••••••" type="password" />
+          {error && <div style={{ padding: "10px 14px", background: `${A.red}22`, border: `1px solid ${A.red}44`, borderRadius: 8, fontSize: 13, color: A.red }}>{error}</div>}
+          <Btn full onClick={submitCredentials} disabled={loading}>{loading ? "Signing in…" : "Sign in to Admin"}</Btn>
+        </div>
+      </Card>
+    </AdminShell>
   );
 }
 
@@ -218,16 +238,19 @@ function Dashboard() {
 
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total Users" value={stats?.total_users} sub={`+${stats?.new_users_7d} this week`} icon="👥" color={A.teal} />
+        <StatCard label="Total Candidates" value={stats?.total_candidate_users} sub={`+${stats?.new_candidate_users_7d} this week`} icon="👥" color={A.teal} />
+        <StatCard label="Employer Accounts" value={stats?.total_employer_users} sub={`${stats?.total_employer_companies} companies`} icon="🏢" color={A.blue} />
         <StatCard label="Paid Subscribers" value={stats?.paid_subscribers} sub={`$${mrr}/mo MRR`} icon="💳" color={A.green} />
         <StatCard label="ID Verified" value={stats?.verified_users} icon="🛡" color={A.blue} />
-        <StatCard label="AI Analyses" value={stats?.ai_analyses_run} icon="🤖" color={A.purple} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+        <StatCard label="AI Analyses" value={stats?.ai_analyses_run} icon="🤖" color={A.purple} />
         <StatCard label="Resumes Uploaded" value={stats?.resumes_parsed} icon="📎" color={A.gold} />
         <StatCard label="Resumes Built" value={stats?.total_resumes} icon="📄" color={A.teal} />
         <StatCard label="Skills Entered" value={stats?.total_skills_entered} icon="⚡" color={A.blue} />
-        <StatCard label="New Users (30d)" value={stats?.new_users_30d} icon="🚀" color={A.green} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+        <StatCard label="New Candidates (30d)" value={stats?.new_candidate_users_30d} icon="🚀" color={A.green} />
       </div>
 
       {/* Plan breakdown */}
@@ -235,7 +258,7 @@ function Dashboard() {
         <Card>
           <div style={{ fontSize: 14, fontWeight: 700, color: A.text, marginBottom: 16 }}>Plan Breakdown</div>
           {[
-            { label: "Free", count: (stats?.total_users || 0) - (stats?.paid_subscribers || 0), color: A.textMuted },
+            { label: "Free", count: (stats?.total_candidate_users || 0) - (stats?.paid_subscribers || 0), color: A.textMuted },
             { label: "Pro ($6/mo)", count: stats?.premium_count || 0, color: A.teal },
             { label: "Career+ ($12/mo)", count: stats?.premium_plus_count || 0, color: A.purple },
           ].map(p => (
@@ -254,7 +277,7 @@ function Dashboard() {
           <div style={{ fontSize: 14, fontWeight: 700, color: A.text, marginBottom: 16 }}>Verification Status</div>
           {[
             { label: "Verified", count: stats?.verified_users || 0, color: A.green },
-            { label: "Not Started", count: (stats?.total_users || 0) - (stats?.verified_users || 0), color: A.textMuted },
+            { label: "Not Started", count: (stats?.total_candidate_users || 0) - (stats?.verified_users || 0), color: A.textMuted },
           ].map(v => (
             <div key={v.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${A.border}` }}>
               <span style={{ fontSize: 14, color: A.textLight }}>{v.label}</span>
@@ -722,12 +745,61 @@ function SubscriptionsPage() {
   );
 }
 
+// ── Security (admin login audit) page ──────────────────────────────────────
+function SecurityPage() {
+  const [rows, setRows] = useState(null);
+
+  useEffect(() => {
+    supabase.rpc("get_admin_login_audit", { p_limit: 200 }).then(({ data }) => setRows(data || []));
+  }, []);
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: A.white, marginBottom: 4 }}>Security</div>
+        <div style={{ fontSize: 14, color: A.textMuted }}>Admin console login attempts — successes and failures.</div>
+      </div>
+
+      {rows === null ? <div style={{ color: A.textMuted, textAlign: "center", padding: 40 }}>Loading…</div> : (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: A.bg }}>
+                {["Email", "Result", "Reason", "User Agent", "When"].map(h => (
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: A.textMuted, fontWeight: 600, fontFamily: font, fontSize: 11, textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id} style={{ borderBottom: `1px solid ${A.border}11` }}>
+                  <td style={{ padding: "14px 16px", color: A.text }}>{r.email}</td>
+                  <td style={{ padding: "14px 16px" }}><Badge color={r.success ? "green" : "red"}>{r.success ? "Success" : "Failed"}</Badge></td>
+                  <td style={{ padding: "14px 16px", color: A.textMuted }}>{r.failure_reason || "—"}</td>
+                  <td style={{ padding: "14px 16px", color: A.textMuted, fontSize: 11, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.user_agent || "—"}</td>
+                  <td style={{ padding: "14px 16px", color: A.textMuted, fontSize: 12 }}>{new Date(r.created_at).toLocaleString()}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: 24, textAlign: "center", color: A.textMuted }}>No login attempts recorded yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ── Sidebar ───────────────────────────────────────────────────────────────
 const NAV = [
   { id: "dashboard",     icon: "◈", label: "Dashboard" },
   { id: "users",         icon: "◉", label: "Users" },
+  { id: "employers",     icon: "⬒", label: "Employers" },
   { id: "subscriptions", icon: "◎", label: "Subscriptions" },
   { id: "templates",     icon: "◫", label: "Templates" },
+  { id: "assessments",   icon: "▤", label: "Assessments" },
+  { id: "security",      icon: "🔒", label: "Security" },
 ];
 
 function Sidebar({ active, onNav, adminUser, onLogout }) {
@@ -781,13 +853,22 @@ export default function AdminApp() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       const u = data.session?.user ?? null;
-      if (u) {
-        const { data: adminRow } = await supabase.from("admin_users").select("*").eq("id", u.id).eq("is_active", true).maybeSingle();
-        if (adminRow) { setAuthUser(u); setAdminUser(adminRow); }
-        else setAuthUser(null);
-      } else {
+      if (!u) { setAuthUser(null); return; }
+
+      const { data: adminRow } = await supabase.from("admin_users").select("*").eq("id", u.id).eq("is_active", true).maybeSingle();
+      if (!adminRow) { setAuthUser(null); return; }
+
+      // A persisted session that never completed its MFA challenge (e.g. the
+      // tab was closed mid-login) sits at aal1 with aal2 available — don't
+      // let that back into the console; force a clean re-login instead.
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+        await supabase.auth.signOut();
         setAuthUser(null);
+        return;
       }
+
+      setAuthUser(u); setAdminUser(adminRow);
     });
   }, []);
 
@@ -807,8 +888,11 @@ export default function AdminApp() {
       <div style={{ flex: 1, padding: 40, overflowY: "auto" }}>
         {page === "dashboard"     && <Dashboard />}
         {page === "users"         && <UsersPage />}
+        {page === "employers"     && <EmployersPage />}
         {page === "subscriptions" && <SubscriptionsPage />}
         {page === "templates"     && <TemplatesPage adminUser={adminUser} />}
+        {page === "assessments"   && <AssessmentsAdminPage adminUser={adminUser} />}
+        {page === "security"      && <SecurityPage />}
       </div>
     </div>
   );

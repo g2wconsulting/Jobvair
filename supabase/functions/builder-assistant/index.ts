@@ -266,6 +266,7 @@ async function callAnthropic(payload: Record<string, unknown>) {
       max_tokens: 2000,
       system: ASSISTANT_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
+      inference_geo: "us",
     }),
   });
 

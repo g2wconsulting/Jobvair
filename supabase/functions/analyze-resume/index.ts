@@ -136,6 +136,7 @@ async function callAnthropic(payload) {
       max_tokens: 2500,
       system: ANALYSIS_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
+      inference_geo: "us",
     }),
   });
 

@@ -7,11 +7,19 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  // Multi-page app: /admin.html and /employer.html are separate entry points
+  // from / (index.html). Without this, Vite's dev server SPA-fallbacks any
+  // unmatched path (e.g. "/employer") to index.html instead of 404ing,
+  // which silently serves the candidate app and masks routing mistakes.
+  appType: "mpa",
   build: {
     rollupOptions: {
       input: {
-        main:  resolve(__dirname, "index.html"),
-        admin: resolve(__dirname, "admin.html"),
+        main:       resolve(__dirname, "index.html"),
+        admin:      resolve(__dirname, "admin.html"),
+        employer:   resolve(__dirname, "employer.html"),
+        assessment: resolve(__dirname, "assessment.html"),
+        jobs:       resolve(__dirname, "jobs.html"),
       },
     },
   },
