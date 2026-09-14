@@ -52,7 +52,10 @@ export default function EmployerAuthScreen({ onAuthed }) {
     if (!email || !password || !name) { setMsg("Please fill in all fields."); return; }
     if (password.length < 8) { setMsg("Password must be at least 8 characters."); return; }
     setLoading(true); setMsg("");
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/employer` },
+    });
     setLoading(false);
     if (error) { setMsg(error.message); return; }
     if (!data.session) {
