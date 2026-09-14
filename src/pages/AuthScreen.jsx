@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
 import { Button, Input } from "../components/ui/index.js";
-import { Mail, ShieldCheck, Eye, TrendingUp, Check, Handshake, Lock, RefreshCw, ArrowRight } from "lucide-react";
+import { Mail, ShieldCheck, Eye, TrendingUp, Check, Handshake, Lock, RefreshCw, ArrowRight, ArrowLeft } from "lucide-react";
 
 function Logo() {
   return (
@@ -87,6 +87,9 @@ export default function AuthScreen({ onLogin }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--jv-gradient-brand)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "var(--jv-font-sans)" }}>
+      <a href="https://jobvair.com" style={{ position: "fixed", top: 24, left: 24, display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.75)", fontSize: 13, textDecoration: "none" }}>
+        <ArrowLeft size={14} /> Back to website
+      </a>
       <div style={{ width: "100%", maxWidth: step === 3 ? 520 : 420 }}>
         <Logo />
 
