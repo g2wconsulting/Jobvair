@@ -16,10 +16,9 @@ import AssessmentsAdminPage from "./admin/AssessmentsAdminPage.jsx";
 import EmployersPage from "./admin/EmployersPage.jsx";
 
 // ── Admin Login ───────────────────────────────────────────────────────────
-// Multi-step: password -> admin_users check -> TOTP MFA (enroll on first
-// login, verify on every login after). Every attempt — including failed
-// password checks and failed MFA codes — is recorded via
-// record_admin_login_attempt() for the lockout check and the audit log.
+// Multi-step: password -> admin_users check -> emailed one-time code. Every
+// attempt — including failed password checks and failed codes — is recorded
+// via record_admin_login_attempt() for the lockout check and the audit log.
 function AdminShell({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: A.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans }}>
@@ -45,16 +44,16 @@ function AdminShell({ children }) {
 }
 
 function AdminLogin({ onLogin }) {
-  const [step, setStep] = useState("credentials"); // credentials | mfa-enroll | mfa-verify
+  const [step, setStep] = useState("credentials"); // credentials | otp-verify
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mfaCode, setMfaCode] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resent, setResent] = useState(false);
 
   // Carried between steps for the same login attempt.
   const [pending, setPending] = useState(null); // { user, adminRow }
-  const [mfa, setMfa] = useState(null); // { factorId, challengeId, qrCode, secret }
 
   const record = (success, failureReason) =>
     supabase.rpc("record_admin_login_attempt", {
@@ -64,6 +63,11 @@ function AdminLogin({ onLogin }) {
       p_user_agent: navigator.userAgent,
       p_user_id: pending?.user?.id || null,
     });
+
+  const sendOtp = async () => {
+    const { error: fnError } = await supabase.functions.invoke("send-admin-otp", { method: "POST" });
+    if (fnError) throw fnError;
+  };
 
   const submitCredentials = async () => {
     if (!email || !password) { setError("Email and password required."); return; }
@@ -103,89 +107,56 @@ function AdminLogin({ onLogin }) {
 
     setPending({ user: data.user, adminRow });
 
-    const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
-    if (factorsError) { setError(factorsError.message); setLoading(false); return; }
-    const totp = (factorsData?.totp || []).find(f => f.status === "verified");
-
-    if (!totp) {
-      const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: "totp" });
-      if (enrollError) { setError(enrollError.message); setLoading(false); return; }
-      setMfa({ factorId: enrollData.id, qrCode: enrollData.totp.qr_code, secret: enrollData.totp.secret });
-      setStep("mfa-enroll");
+    try {
+      await sendOtp();
+    } catch (err) {
+      setError(err.message || "Failed to send sign-in code.");
       setLoading(false);
       return;
     }
-
-    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: totp.id });
-    if (challengeError) { setError(challengeError.message); setLoading(false); return; }
-    setMfa({ factorId: totp.id, challengeId: challengeData.id });
-    setStep("mfa-verify");
+    setStep("otp-verify");
     setLoading(false);
   };
 
-  const submitMfaEnroll = async () => {
-    if (mfaCode.length !== 6) { setError("Enter the 6-digit code from your authenticator app."); return; }
+  const resendOtp = async () => {
+    setLoading(true); setError(""); setResent(false);
+    try {
+      await sendOtp();
+      setResent(true);
+    } catch (err) {
+      setError(err.message || "Failed to resend code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitOtp = async () => {
+    if (otpCode.length !== 6) { setError("Enter the 6-digit code from your email."); return; }
     setLoading(true); setError("");
-    const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfa.factorId, code: mfaCode });
-    if (verifyError) {
-      await record(false, "mfa_failed");
-      setError("That code didn't verify. Check your authenticator app and try again.");
+    const { data: verified, error: verifyError } = await supabase.rpc("verify_admin_email_otp", { p_code: otpCode });
+    if (verifyError || !verified) {
+      await record(false, "otp_failed");
+      setError("Invalid or expired code. Try again, or resend a new one.");
       setLoading(false);
       return;
     }
     await record(true);
+    sessionStorage.setItem("jobvair_admin_otp_verified", "1");
     onLogin(pending.user, pending.adminRow);
   };
 
-  const submitMfaVerify = async () => {
-    if (mfaCode.length !== 6) { setError("Enter the 6-digit code from your authenticator app."); return; }
-    setLoading(true); setError("");
-    const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: mfa.factorId, challengeId: mfa.challengeId, code: mfaCode });
-    if (verifyError) {
-      await record(false, "mfa_failed");
-      setError("Invalid code. Try again.");
-      setLoading(false);
-      return;
-    }
-    await record(true);
-    onLogin(pending.user, pending.adminRow);
-  };
-
-  if (step === "mfa-enroll") {
+  if (step === "otp-verify") {
     return (
       <AdminShell>
         <Card>
-          <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Set up two-factor authentication</div>
-          <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 20 }}>Required for admin access. Scan this with Google Authenticator, Authy, or any TOTP app.</div>
-          {mfa?.qrCode && (
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, background: "#fff", padding: 16, borderRadius: 8 }}
-              dangerouslySetInnerHTML={{ __html: mfa.qrCode }} />
-          )}
-          {mfa?.secret && (
-            <div style={{ fontSize: 11, color: A.textMuted, textAlign: "center", marginBottom: 20, wordBreak: "break-all", fontFamily: font }}>
-              Can't scan? Enter manually: {mfa.secret}
-            </div>
-          )}
+          <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Check your email</div>
+          <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 24 }}>We sent a 6-digit code to {email}. It expires in 10 minutes.</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Input label="6-digit code" value={mfaCode} onChange={setMfaCode} placeholder="000000" />
+            <Input label="6-digit code" value={otpCode} onChange={setOtpCode} placeholder="000000" />
             {error && <div style={{ padding: "10px 14px", background: `${A.red}22`, border: `1px solid ${A.red}44`, borderRadius: 8, fontSize: 13, color: A.red }}>{error}</div>}
-            <Btn full onClick={submitMfaEnroll} disabled={loading}>{loading ? "Verifying…" : "Verify & Finish Setup"}</Btn>
-          </div>
-        </Card>
-      </AdminShell>
-    );
-  }
-
-  if (step === "mfa-verify") {
-    return (
-      <AdminShell>
-        <Card>
-          <div style={{ fontSize: 18, fontWeight: 700, color: A.text, marginBottom: 4 }}>Two-factor authentication</div>
-          <div style={{ fontSize: 13, color: A.textMuted, marginBottom: 24 }}>Enter the 6-digit code from your authenticator app.</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Input label="6-digit code" value={mfaCode} onChange={setMfaCode} placeholder="000000" />
-            {error && <div style={{ padding: "10px 14px", background: `${A.red}22`, border: `1px solid ${A.red}44`, borderRadius: 8, fontSize: 13, color: A.red }}>{error}</div>}
-            <Btn full onClick={submitMfaVerify} disabled={loading}>{loading ? "Verifying…" : "Verify"}</Btn>
+            {resent && <div style={{ padding: "10px 14px", background: `${A.green}22`, border: `1px solid ${A.green}44`, borderRadius: 8, fontSize: 13, color: A.green }}>A new code has been sent.</div>}
+            <Btn full onClick={submitOtp} disabled={loading}>{loading ? "Verifying…" : "Verify"}</Btn>
+            <Btn full variant="ghost" onClick={resendOtp} disabled={loading}>Resend code</Btn>
           </div>
         </Card>
       </AdminShell>
@@ -858,11 +829,15 @@ export default function AdminApp() {
       const { data: adminRow } = await supabase.from("admin_users").select("*").eq("id", u.id).eq("is_active", true).maybeSingle();
       if (!adminRow) { setAuthUser(null); return; }
 
-      // A persisted session that never completed its MFA challenge (e.g. the
-      // tab was closed mid-login) sits at aal1 with aal2 available — don't
-      // let that back into the console; force a clean re-login instead.
-      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+      // Password sign-in alone creates a fully valid, persisted Supabase
+      // session — the emailed code is enforced only at this app's login UI,
+      // not by Supabase itself. sessionStorage (cleared when the tab/window
+      // closes, unlike localStorage) marks that this specific tab session
+      // actually completed the code step; a session restored without that
+      // marker (e.g. someone reopening a closed tab, or a different tab
+      // entirely) is forced through a clean re-login rather than skipping
+      // straight to the dashboard on the password alone.
+      if (sessionStorage.getItem("jobvair_admin_otp_verified") !== "1") {
         await supabase.auth.signOut();
         setAuthUser(null);
         return;
@@ -873,7 +848,11 @@ export default function AdminApp() {
   }, []);
 
   const handleLogin = (user, adminRow) => { setAuthUser(user); setAdminUser(adminRow); };
-  const handleLogout = async () => { await supabase.auth.signOut(); setAuthUser(null); setAdminUser(null); };
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    sessionStorage.removeItem("jobvair_admin_otp_verified");
+    setAuthUser(null); setAdminUser(null);
+  };
 
   if (authUser === undefined) {
     return <div style={{ minHeight: "100vh", background: A.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: sans, color: A.textMuted }}>Loading…</div>;
