@@ -66,7 +66,19 @@ function AdminLogin({ onLogin }) {
 
   const sendOtp = async () => {
     const { error: fnError } = await supabase.functions.invoke("send-admin-otp", { method: "POST" });
-    if (fnError) throw fnError;
+    if (fnError) {
+      // supabase-js's FunctionsHttpError.message is a useless generic
+      // "non-2xx status code" string — the actual reason is in the
+      // response body, which has to be read separately.
+      let detail = fnError.message;
+      try {
+        const body = await fnError.context?.json();
+        if (body?.error) detail = body.error;
+      } catch {
+        // body wasn't JSON or context unavailable — fall back to the generic message
+      }
+      throw new Error(detail);
+    }
   };
 
   const submitCredentials = async () => {
