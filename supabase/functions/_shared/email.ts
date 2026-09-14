@@ -160,6 +160,26 @@ export interface InterviewInviteEmailParams {
   meetingLink: string | null;
 }
 
+export interface AdminOtpEmailParams {
+  to: string;
+  code: string;
+}
+
+export async function sendAdminOtpEmail(params: AdminOtpEmailParams): Promise<{ sent: boolean; error?: string }> {
+  const html = `
+<div style="font-family: -apple-system, 'Inter', system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #111827;">
+  <div style="text-align:center; margin-bottom:28px;">
+    <div style="display:inline-block; width:40px; height:40px; border-radius:10px; background:#1D4ED8; line-height:40px; color:#fff; font-weight:700; font-size:18px;">J</div>
+    <div style="font-size:13px; color:#6B7280; margin-top:8px;">Jobvair Admin Console</div>
+  </div>
+  <h1 style="font-size:18px; margin:0 0 12px; text-align:center;">Your sign-in code</h1>
+  <div style="text-align:center; margin:24px 0; font-size:32px; font-weight:800; letter-spacing:0.15em; color:#111827;">${escapeHtml(params.code)}</div>
+  <p style="font-size:13px; line-height:1.6; color:#6B7280; margin:0 0 8px; text-align:center;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
+</div>`.trim();
+  const text = `Your Jobvair admin sign-in code: ${params.code}\n\nThis code expires in 10 minutes. If you didn't request this, you can ignore this email.`;
+  return sendEmail({ to: params.to, subject: `${params.code} is your Jobvair admin sign-in code`, html, text });
+}
+
 export async function sendInterviewInviteEmail(params: InterviewInviteEmailParams): Promise<{ sent: boolean; error?: string }> {
   const firstName = (params.candidateName || "there").split(" ")[0];
   const when = new Date(params.scheduledAt).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" });
