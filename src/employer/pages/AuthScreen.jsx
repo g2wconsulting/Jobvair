@@ -87,6 +87,9 @@ export default function EmployerAuthScreen({ onAuthed }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--jv-gradient-brand)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "var(--jv-font-sans)" }}>
+      <a href="https://jobvair.com" style={{ position: "fixed", top: 24, left: 24, display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.75)", fontSize: 13, textDecoration: "none" }}>
+        <ArrowLeft size={14} /> Back to website
+      </a>
       <div style={{ width: "100%", maxWidth: step === 2 && mode === "register" ? 620 : 420 }}>
         <Logo />
 
